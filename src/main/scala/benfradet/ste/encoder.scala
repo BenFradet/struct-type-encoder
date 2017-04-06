@@ -22,11 +22,11 @@ trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
 object DataTypeEncoder {
   def apply[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[A] = enc
 
-  def pureDT[A](func: => DataType): DataTypeEncoder[A] =
-    new DataTypeEncoder[A] { def encode: DataType = func }
+  def pureDT[A](dt: DataType): DataTypeEncoder[A] =
+    new DataTypeEncoder[A] { def encode: DataType = dt }
 
-  def pureST[A](func: => StructType): StructTypeEncoder[A] =
-    new StructTypeEncoder[A] { def encode: StructType = func }
+  def pureST[A](st: StructType): StructTypeEncoder[A] =
+    new StructTypeEncoder[A] { def encode: StructType = st }
 
   implicit val stringEncoder: DataTypeEncoder[String] = pureDT(StringType)
   implicit val intEncoder: DataTypeEncoder[Int] = pureDT(NumberType)
@@ -48,7 +48,13 @@ object DataTypeEncoder {
     pureST {
       val head = hEncoder.value.encode
       val tail = tEncoder.encode
-      StructType((fieldName, tail) :: tail.fields)
+      StructType((fieldName, head) :: tail.fields)
     }
   }
+  implicit def genericEncoder[A, H <: HList](
+    implicit
+    generic: LabelledGeneric.Aux[A, H],
+    hEncoder: Lazy[StructTypeEncoder[H]]
+  ): DataTypeEncoder[A] =
+    pureST(hEncoder.value.encode)
 }
