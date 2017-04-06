@@ -12,8 +12,8 @@ trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
   def encode: StructType
 }
 
-object DataTypeEncoder {
-  def apply[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[A] = enc
+object StructTypeEncoder {
+  def apply[A](implicit enc: StructTypeEncoder[A]): StructTypeEncoder[A] = enc
 
   def pureDT[A](dt: DataType): DataTypeEncoder[A] =
     new DataTypeEncoder[A] { def encode: DataType = dt }
@@ -48,6 +48,6 @@ object DataTypeEncoder {
     implicit
     generic: LabelledGeneric.Aux[A, H],
     hEncoder: Lazy[StructTypeEncoder[H]]
-  ): DataTypeEncoder[A] =
+  ): StructTypeEncoder[A] =
     pureST(hEncoder.value.encode)
 }
