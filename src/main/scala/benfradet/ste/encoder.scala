@@ -4,19 +4,21 @@ import shapeless.{::, HList, HNil, LabelledGeneric, Lazy, Witness}
 import shapeless.labelled.FieldType
 
 sealed abstract class DataType
-final case class StructType(fields: List[(String, DataType)]) extends DataType
+final case class StructType(fields: Array[StructField]) extends DataType
 final case class ArrayType(elementType: DataType) extends DataType
 case object StringType extends DataType
 case object NumberType extends DataType
 case object BooleanType extends DataType
 case object NullType extends DataType
 
+final case class StructField(name: String, dataType: DataType)
+
 trait DataTypeEncoder[A] {
   def encode: DataType
 }
 
 trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
-    def encode: StructType
+  def encode: StructType
 }
 
 object DataTypeEncoder {
@@ -37,7 +39,7 @@ object DataTypeEncoder {
     pureDT(ArrayType(enc.encode))
   // TODO: link option and nullable
 
-  implicit val hnilEncoder: StructTypeEncoder[HNil] = pureST(StructType(Nil))
+  implicit val hnilEncoder: StructTypeEncoder[HNil] = pureST(StructType(Array.empty))
   implicit def hlistEncoder[K <: Symbol, H, T <: HList](
     implicit
     witness: Witness.Aux[K],
@@ -48,7 +50,7 @@ object DataTypeEncoder {
     pureST {
       val head = hEncoder.value.encode
       val tail = tEncoder.encode
-      StructType((fieldName, head) :: tail.fields)
+      StructType(StructField(fieldName, head) +: tail.fields)
     }
   }
   implicit def genericEncoder[A, H <: HList](
