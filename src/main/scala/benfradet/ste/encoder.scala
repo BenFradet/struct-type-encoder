@@ -1,17 +1,8 @@
 package benfradet.ste
 
+import org.apache.spark.sql.types._
 import shapeless.{::, HList, HNil, LabelledGeneric, Lazy, Witness}
 import shapeless.labelled.FieldType
-
-sealed abstract class DataType
-final case class StructType(fields: Array[StructField]) extends DataType
-final case class ArrayType(elementType: DataType) extends DataType
-case object StringType extends DataType
-case object NumberType extends DataType
-case object BooleanType extends DataType
-case object NullType extends DataType
-
-final case class StructField(name: String, dataType: DataType)
 
 trait DataTypeEncoder[A] {
   def encode: DataType
@@ -31,15 +22,15 @@ object DataTypeEncoder {
     new StructTypeEncoder[A] { def encode: StructType = st }
 
   implicit val stringEncoder: DataTypeEncoder[String] = pureDT(StringType)
-  implicit val intEncoder: DataTypeEncoder[Int] = pureDT(NumberType)
-  implicit val doubleEncoder: DataTypeEncoder[Double] = pureDT(NumberType)
+  implicit val intEncoder: DataTypeEncoder[Int] = pureDT(IntegerType)
+  implicit val doubleEncoder: DataTypeEncoder[Double] = pureDT(DoubleType)
   implicit val booleanEncoder: DataTypeEncoder[Boolean] = pureDT(BooleanType)
 
   implicit def listEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[List[A]] =
     pureDT(ArrayType(enc.encode))
   // TODO: link option and nullable
 
-  implicit val hnilEncoder: StructTypeEncoder[HNil] = pureST(StructType(Array.empty))
+  implicit val hnilEncoder: StructTypeEncoder[HNil] = pureST(StructType(Nil))
   implicit def hlistEncoder[K <: Symbol, H, T <: HList](
     implicit
     witness: Witness.Aux[K],
