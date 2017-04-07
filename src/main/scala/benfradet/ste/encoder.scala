@@ -21,13 +21,23 @@ object StructTypeEncoder {
   def pureST[A](st: StructType): StructTypeEncoder[A] =
     new StructTypeEncoder[A] { def encode: StructType = st }
 
-  implicit val stringEncoder: DataTypeEncoder[String] = pureDT(StringType)
-  implicit val intEncoder: DataTypeEncoder[Int] = pureDT(IntegerType)
-  implicit val doubleEncoder: DataTypeEncoder[Double] = pureDT(DoubleType)
   implicit val booleanEncoder: DataTypeEncoder[Boolean] = pureDT(BooleanType)
+  implicit val byteEncoder: DataTypeEncoder[Byte] = pureDT(ByteType)
+  implicit val doubleEncoder: DataTypeEncoder[Double] = pureDT(DoubleType)
+  implicit val floatEncoder: DataTypeEncoder[Float] = pureDT(FloatType)
+  implicit val intEncoder: DataTypeEncoder[Int] = pureDT(IntegerType)
+  implicit val longType: DataTypeEncoder[Long] = pureDT(LongType)
+  implicit val shortType: DataTypeEncoder[Short] = pureDT(ShortType)
+  implicit val stringEncoder: DataTypeEncoder[String] = pureDT(StringType)
 
   implicit def listEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[List[A]] =
     pureDT(ArrayType(enc.encode))
+  implicit def mapEncoder[K, V](
+    implicit
+    kEnc: DataTypeEncoder[K],
+    vEnc: DataTypeEncoder[V]
+  ): DataTypeEncoder[Map[K, V]] =
+    pureDT(MapType(kEnc.encode, vEnc.encode))
   // TODO: link option and nullable
 
   implicit val hnilEncoder: StructTypeEncoder[HNil] = pureST(StructType(Nil))
