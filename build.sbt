@@ -6,6 +6,7 @@ lazy val buildSettings = Seq(
 
 lazy val shapelessVersion = "2.3.2"
 lazy val sparkVersion = "2.1.0"
+lazy val scalatestVersion = "3.0.1"
 
 lazy val structTypeEncoder = (project in file("."))
   .settings(name := "struct-type-encoder")
@@ -20,4 +21,6 @@ lazy val structTypeEncoder = (project in file("."))
   .settings(libraryDependencies ++= Seq(
     "com.chuusai" %% "shapeless" % shapelessVersion,
     "org.apache.spark" %% "spark-sql" % sparkVersion
-  ))
+  ) ++ Seq(
+    "org.scalatest" %% "scalatest" % scalatestVersion
+  ).map(_ % "test"))
