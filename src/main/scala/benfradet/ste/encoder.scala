@@ -4,6 +4,8 @@ import org.apache.spark.sql.types._
 import shapeless.{::, HList, HNil, LabelledGeneric, Lazy, Witness}
 import shapeless.labelled.FieldType
 
+import scala.collection.generic.IsTraversableOnce
+
 trait DataTypeEncoder[A] {
   def encode: DataType
 }
@@ -32,13 +34,11 @@ object StructTypeEncoder {
   implicit val stringEncoder: DataTypeEncoder[String] = pureDT(StringType)
 
   // combinator instances
-  implicit def arrayEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[Array[A]] =
-    pureDT(ArrayType(enc.encode))
-  implicit def listEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[List[A]] =
-    pureDT(ArrayType(enc.encode))
-  implicit def setEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[Set[A]] =
-    pureDT(ArrayType(enc.encode))
-  implicit def vectorEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[Vector[A]] =
+  implicit def encodeTraversableOnce[A0, C[_]](
+    implicit
+    enc: DataTypeEncoder[A0],
+    is: IsTraversableOnce[C[A0]] { type A = A0 }
+  ): DataTypeEncoder[C[A0]] =
     pureDT(ArrayType(enc.encode))
   implicit def mapEncoder[K, V](
     implicit
