@@ -21,6 +21,7 @@ object StructTypeEncoder {
   def pureST[A](st: StructType): StructTypeEncoder[A] =
     new StructTypeEncoder[A] { def encode: StructType = st }
 
+  // primitive instances
   implicit val booleanEncoder: DataTypeEncoder[Boolean] = pureDT(BooleanType)
   implicit val byteEncoder: DataTypeEncoder[Byte] = pureDT(ByteType)
   implicit val doubleEncoder: DataTypeEncoder[Double] = pureDT(DoubleType)
@@ -30,7 +31,14 @@ object StructTypeEncoder {
   implicit val shortType: DataTypeEncoder[Short] = pureDT(ShortType)
   implicit val stringEncoder: DataTypeEncoder[String] = pureDT(StringType)
 
+  // combinator instances
+  implicit def arrayEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[Array[A]] =
+    pureDT(ArrayType(enc.encode))
   implicit def listEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[List[A]] =
+    pureDT(ArrayType(enc.encode))
+  implicit def setEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[Set[A]] =
+    pureDT(ArrayType(enc.encode))
+  implicit def vectorEncoder[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[Vector[A]] =
     pureDT(ArrayType(enc.encode))
   implicit def mapEncoder[K, V](
     implicit
