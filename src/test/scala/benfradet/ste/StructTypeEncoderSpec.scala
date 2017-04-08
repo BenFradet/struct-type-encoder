@@ -42,4 +42,18 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
       StructField("b", IntegerType) :: Nil
     )
   }
+
+  it should "deal with tuples" in {
+    case class Foo(a: (String, Int))
+    StructTypeEncoder[Foo].encode shouldBe StructType(
+      StructField("a", StructType(
+        StructField("_1", StringType) ::
+        StructField("_2", IntegerType) :: Nil
+      )) :: Nil
+    )
+    StructTypeEncoder[(String, Int)].encode shouldBe StructType(
+      StructField("_1", StringType) ::
+      StructField("_2", IntegerType) :: Nil
+    )
+  }
 }
