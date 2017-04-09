@@ -2,6 +2,7 @@ package benfradet.ste
 
 import org.apache.spark.sql.types._
 import org.scalatest.{FlatSpec, Matchers}
+import shapeless.test.illTyped
 
 class StructTypeEncoderSpec extends FlatSpec with Matchers {
   import StructTypeEncoder._
@@ -55,5 +56,10 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
       StructField("_1", StringType) ::
       StructField("_2", IntegerType) :: Nil
     )
+  }
+
+  it should "not compile with something that is not a product" in {
+    class Foo(a: Int)
+    illTyped { """StructTypeEncoder[Foo].encode""" }
   }
 }

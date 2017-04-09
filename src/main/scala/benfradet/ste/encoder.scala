@@ -10,6 +10,10 @@ trait DataTypeEncoder[A] {
   def encode: DataType
 }
 
+@annotation.implicitNotFound("""
+  Type ${A} does not have a StructTypeEncoder defined in the library.
+  You need to define one yourself.
+  """)
 trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
   def encode: StructType
 }
