@@ -44,8 +44,6 @@ Spark represents a schema) from your case class automatically:
 
 ```scala
 import benfradet.ste._
-import benfradet.StructTypeEncoder._
-
 val derived = spark
   .read
   .schema(StructTypeEncoder[MyCaseClass].encode)

@@ -28,7 +28,6 @@ lazy val structTypeEncoder = (project in file("."))
     initialCommands in console :=
       """
         |import benfradet.ste._
-        |import benfradet.ste.StructTypeEncoder._
       """.stripMargin
   )
   .settings(libraryDependencies ++= Seq(
