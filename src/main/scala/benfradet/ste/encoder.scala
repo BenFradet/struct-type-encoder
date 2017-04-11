@@ -21,6 +21,7 @@ object DataTypeEncoder {
     new DataTypeEncoder[A] { def encode: DataType = dt }
 
   // primitive instances
+  implicit val binaryEncoder: DataTypeEncoder[Array[Byte]] = pure(BinaryType)
   implicit val booleanEncoder: DataTypeEncoder[Boolean] = pure(BooleanType)
   implicit val byteEncoder: DataTypeEncoder[Byte] = pure(ByteType)
   implicit val doubleEncoder: DataTypeEncoder[Double] = pure(DoubleType)
@@ -43,7 +44,6 @@ object DataTypeEncoder {
     vEnc: DataTypeEncoder[V]
   ): DataTypeEncoder[Map[K, V]] =
     pure(MapType(kEnc.encode, vEnc.encode))
-  // TODO: link option and nullable
 }
 
 @annotation.implicitNotFound("""
