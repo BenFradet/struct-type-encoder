@@ -10,7 +10,7 @@ import scala.collection.generic.IsTraversableOnce
   Type ${A} does not have a DataTypeEncoder defined in the library.
   You need to define one yourself.
   """)
-trait DataTypeEncoder[A] {
+sealed trait DataTypeEncoder[A] {
   def encode: DataType
 }
 
@@ -50,7 +50,7 @@ object DataTypeEncoder {
   Type ${A} does not have a StructTypeEncoder defined in the library.
   You need to define one yourself.
   """)
-trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
+sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
   def encode: StructType
 }
 
