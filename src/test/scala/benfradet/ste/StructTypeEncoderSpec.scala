@@ -8,20 +8,21 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
   import StructTypeEncoder._
 
   "A StructTypeEncoder" should "deal with the supported primitive types" in {
-    case class Foo(a: Array[Byte], b: Boolean, c: Byte, d: BigDecimal, e: Double, f: Float, g: Int, 
-      h: Long, i: Short, j: String, k: java.sql.Timestamp)
+    case class Foo(a: Array[Byte], b: Boolean, c: Byte, d: java.sql.Date, e: BigDecimal, f: Double, 
+      g: Float, h: Int, i: Long, j: Short, k: String, l: java.sql.Timestamp)
     StructTypeEncoder[Foo].encode shouldBe StructType(
       StructField("a", BinaryType) ::
       StructField("b", BooleanType) ::
       StructField("c", ByteType) ::
-      StructField("d", DecimalType.SYSTEM_DEFAULT) ::
-      StructField("e", DoubleType) ::
-      StructField("f", FloatType) ::
-      StructField("g", IntegerType) ::
-      StructField("h", LongType) ::
-      StructField("i", ShortType) ::
-      StructField("j", StringType) ::
-      StructField("k", TimestampType) :: Nil
+      StructField("d", DateType) ::
+      StructField("e", DecimalType.SYSTEM_DEFAULT) ::
+      StructField("f", DoubleType) ::
+      StructField("g", FloatType) ::
+      StructField("h", IntegerType) ::
+      StructField("i", LongType) ::
+      StructField("j", ShortType) ::
+      StructField("k", StringType) ::
+      StructField("l", TimestampType) :: Nil
     )
   }
 
