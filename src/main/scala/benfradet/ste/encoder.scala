@@ -31,6 +31,7 @@ object DataTypeEncoder {
   implicit val longType: DataTypeEncoder[Long] = pure(LongType)
   implicit val shortType: DataTypeEncoder[Short] = pure(ShortType)
   implicit val stringEncoder: DataTypeEncoder[String] = pure(StringType)
+  implicit val timestampEncoder: DataTypeEncoder[java.sql.Timestamp] = pure(TimestampType)
 
   // combinator instances
   implicit def encodeTraversableOnce[A0, C[_]](
