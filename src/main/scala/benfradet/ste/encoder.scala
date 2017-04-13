@@ -24,6 +24,7 @@ object DataTypeEncoder {
   implicit val binaryEncoder: DataTypeEncoder[Array[Byte]] = pure(BinaryType)
   implicit val booleanEncoder: DataTypeEncoder[Boolean] = pure(BooleanType)
   implicit val byteEncoder: DataTypeEncoder[Byte] = pure(ByteType)
+  implicit val decimalEncoder: DataTypeEncoder[BigDecimal] = pure(DecimalType.SYSTEM_DEFAULT)
   implicit val doubleEncoder: DataTypeEncoder[Double] = pure(DoubleType)
   implicit val floatEncoder: DataTypeEncoder[Float] = pure(FloatType)
   implicit val intEncoder: DataTypeEncoder[Int] = pure(IntegerType)

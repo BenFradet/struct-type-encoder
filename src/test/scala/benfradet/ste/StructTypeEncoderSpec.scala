@@ -8,18 +8,19 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
   import StructTypeEncoder._
 
   "A StructTypeEncoder" should "deal with the supported primitive types" in {
-    case class Foo(a: Array[Byte], b: Boolean, c: Byte, d: Double, e: Float, f: Int, g: Long,
-      h: Short, i: String)
+    case class Foo(a: Array[Byte], b: Boolean, c: Byte, d: BigDecimal, e: Double, f: Float, g: Int, 
+      h: Long, i: Short, j: String)
     StructTypeEncoder[Foo].encode shouldBe StructType(
       StructField("a", BinaryType) ::
       StructField("b", BooleanType) ::
       StructField("c", ByteType) ::
-      StructField("d", DoubleType) ::
-      StructField("e", FloatType) ::
-      StructField("f", IntegerType) ::
-      StructField("g", LongType) ::
-      StructField("h", ShortType) ::
-      StructField("i", StringType) :: Nil
+      StructField("d", DecimalType.SYSTEM_DEFAULT) ::
+      StructField("e", DoubleType) ::
+      StructField("f", FloatType) ::
+      StructField("g", IntegerType) ::
+      StructField("h", LongType) ::
+      StructField("i", ShortType) ::
+      StructField("j", StringType) :: Nil
     )
   }
 
