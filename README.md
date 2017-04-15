@@ -1,5 +1,7 @@
 # struct-type-encoder
 
+[![Build Status](https://travis-ci.org/BenFradet/struct-type-encoder.svg?branch=master)](https://travis-ci.org/BenFradet/struct-type-encoder)
+
 Deriving Spark DataFrame schemas from case classes.
 
 ## Motivation
