@@ -26,6 +26,11 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
     )
   }
 
+  it should "work with Unit" ignore {
+    case class A(a: Unit)
+    StructTypeEncoder[A].encode shouldBe StructType(StructField("a", NullType) :: Nil)
+  }
+
   it should "deal with the supported combinators" in {
     case class Foo(a: Seq[Int], b: List[Int], c: Set[Int], d: Vector[Int], e: Array[Int])
     StructTypeEncoder[Foo].encode shouldBe StructType(

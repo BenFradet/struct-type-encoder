@@ -30,6 +30,7 @@ object DataTypeEncoder {
   implicit val floatEncoder: DataTypeEncoder[Float] = pure(FloatType)
   implicit val intEncoder: DataTypeEncoder[Int] = pure(IntegerType)
   implicit val longType: DataTypeEncoder[Long] = pure(LongType)
+  implicit val nullEncoder: DataTypeEncoder[Unit] = pure(NullType)
   implicit val shortType: DataTypeEncoder[Short] = pure(ShortType)
   implicit val stringEncoder: DataTypeEncoder[String] = pure(StringType)
   implicit val timestampEncoder: DataTypeEncoder[java.sql.Timestamp] = pure(TimestampType)
