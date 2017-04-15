@@ -1,7 +1,7 @@
 package benfradet.ste
 
 import org.apache.spark.sql.types._
-import shapeless.{::, HList, HNil, LabelledGeneric, Lazy, Witness}
+import shapeless._
 import shapeless.labelled.FieldType
 
 import scala.collection.generic.IsTraversableOnce
@@ -65,7 +65,7 @@ object StructTypeEncoder {
     new StructTypeEncoder[A] { def encode: StructType = st }
 
   implicit val hnilEncoder: StructTypeEncoder[HNil] = pure(StructType(Nil))
-  implicit def hlistEncoder[K <: Symbol, H, T <: HList](
+  implicit def hconsEncoder[K <: Symbol, H, T <: HList](
     implicit
     witness: Witness.Aux[K],
     hEncoder: Lazy[DataTypeEncoder[H]],
@@ -78,6 +78,22 @@ object StructTypeEncoder {
       StructType(StructField(fieldName, head) +: tail.fields)
     }
   }
+
+  implicit val cnilEncoder: StructTypeEncoder[CNil] = pure(StructType(Nil))
+  implicit def cconsEncoder[K <: Symbol, H, T <: Coproduct](
+    implicit
+    witness: Witness.Aux[K],
+    hEncoder: Lazy[StructTypeEncoder[H]],
+    tEncoder: StructTypeEncoder[T]
+  ): StructTypeEncoder[FieldType[K, H] :+: T] = {
+    val typeName = witness.value.name
+    pure {
+      val head = hEncoder.value.encode
+      val tail = tEncoder.encode
+      StructType(StructField(typeName, head) +: tail.fields)
+    }
+  }
+
   implicit def genericEncoder[A, H <: HList](
     implicit
     generic: LabelledGeneric.Aux[A, H],
