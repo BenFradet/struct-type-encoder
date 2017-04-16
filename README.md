@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/BenFradet/struct-type-encoder.svg?branch=master)](https://travis-ci.org/BenFradet/struct-type-encoder)
 [![Join the chat at https://gitter.im/struct-type-encoder/Lobby](https://badges.gitter.im/struct-type-encoder/Lobby.svg)](https://gitter.im/struct-type-encoder/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Stories in Ready](https://badge.waffle.io/BenFradet/struct-type-encoder.png?label=ready&title=Ready)](https://waffle.io/BenFradet/struct-type-encoder)
 
 Deriving Spark DataFrame schemas from case classes.
 
