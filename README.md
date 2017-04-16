@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/BenFradet/struct-type-encoder.png?label=ready&title=Ready)](https://waffle.io/BenFradet/struct-type-encoder)
 # struct-type-encoder
 
 [![Build Status](https://travis-ci.org/BenFradet/struct-type-encoder.svg?branch=master)](https://travis-ci.org/BenFradet/struct-type-encoder)
