@@ -1,4 +1,4 @@
-package benfradet.ste
+package ste
 
 import org.apache.spark.sql.types._
 import shapeless._
