@@ -1,5 +1,7 @@
 # struct-type-encoder
 
+[![Join the chat at https://gitter.im/struct-type-encoder/Lobby](https://badges.gitter.im/struct-type-encoder/Lobby.svg)](https://gitter.im/struct-type-encoder/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Deriving Spark DataFrame schemas from case classes.
 
 ## Motivation
