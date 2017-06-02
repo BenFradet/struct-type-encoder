@@ -21,19 +21,55 @@ lazy val shapelessVersion = "2.3.2"
 lazy val sparkVersion = "2.1.0"
 lazy val scalatestVersion = "3.0.1"
 
+lazy val baseSettings = Seq(
+  libraryDependencies ++= Seq(
+    "com.chuusai" %% "shapeless" % shapelessVersion,
+    "org.apache.spark" %% "spark-sql" % sparkVersion
+  ) ++ Seq(
+    "org.scalatest" %% "scalatest" % scalatestVersion
+  ).map(_ % "test"),
+  scalacOptions ++= compilerOptions
+)
+
+lazy val allSettings = buildSettings ++ baseSettings
+
 lazy val structTypeEncoder = (project in file("."))
-  .settings(name := "struct-type-encoder")
-  .settings(buildSettings)
+  .settings(moduleName := "struct-type-encoder")
+  .settings(allSettings)
   .settings(
     initialCommands in console :=
       """
         |import ste._
       """.stripMargin
   )
-  .settings(libraryDependencies ++= Seq(
-    "com.chuusai" %% "shapeless" % shapelessVersion,
-    "org.apache.spark" %% "spark-sql" % sparkVersion
-  ) ++ Seq(
-    "org.scalatest" %% "scalatest" % scalatestVersion
-  ).map(_ % "test"))
-  .settings(scalacOptions ++= compilerOptions)
+  .aggregate(core, benchmarks)
+  .dependsOn(core)
+
+lazy val core = project
+  .settings(moduleName := "struct-type-encoder-core")
+  .settings(allSettings)
+
+lazy val benchmarks = project
+  .settings(moduleName := "struct-type-encoder-benchmarks")
+  .enablePlugins(JmhPlugin)
+  .settings(allSettings)
+  .settings(
+    javaOptions in run ++= Seq(
+      "-Djava.net.preferIPv4Stack=true",
+      "-XX:+AggressiveOpts",
+      "-XX:+UseParNewGC",
+      "-XX:+UseConcMarkSweepGC",
+      "-XX:+CMSParallelRemarkEnabled",
+      "-XX:+CMSClassUnloadingEnabled",
+      "-XX:ReservedCodeCacheSize=128m",
+      "-Xss8M",
+      "-Xms512M",
+      "-XX:SurvivorRatio=128",
+      "-XX:MaxTenuringThreshold=0",
+      "-Xss8M",
+      "-Xms512M",
+      "-Xmx2G",
+      "-server"
+    )
+  )
+  .dependsOn(core)
