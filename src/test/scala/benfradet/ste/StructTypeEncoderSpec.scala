@@ -48,6 +48,7 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
   }
 
   it should "work with Unit" ignore {
+    // pickec up by genericEncoder
     case class A(a: Unit)
     StructTypeEncoder[A].encode shouldBe StructType(StructField("a", NullType) :: Nil)
   }

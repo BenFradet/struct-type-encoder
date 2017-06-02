@@ -76,7 +76,7 @@ object DataTypeEncoder {
   You need to define one yourself.
   """)
 sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
-  def encode: StructType
+  override def encode: StructType
 }
 
 object StructTypeEncoder {
@@ -97,21 +97,6 @@ object StructTypeEncoder {
       val head = hEncoder.value.encode
       val tail = tEncoder.encode
       StructType(StructField(fieldName, head) +: tail.fields)
-    }
-  }
-
-  implicit val cnilEncoder: StructTypeEncoder[CNil] = pure(StructType(Nil))
-  implicit def cconsEncoder[K <: Symbol, H, T <: Coproduct](
-    implicit
-    witness: Witness.Aux[K],
-    hEncoder: Lazy[StructTypeEncoder[H]],
-    tEncoder: StructTypeEncoder[T]
-  ): StructTypeEncoder[FieldType[K, H] :+: T] = {
-    val typeName = witness.value.name
-    pure {
-      val head = hEncoder.value.encode
-      val tail = tEncoder.encode
-      StructType(StructField(typeName, head) +: tail.fields)
     }
   }
 
