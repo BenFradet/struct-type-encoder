@@ -32,30 +32,46 @@ case class Foo(a: String, b: String)
 
 @BenchmarkMode(Array(Mode.AverageTime))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Warmup(iterations = 5, time = 10, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 5, time = 10, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 20, time = 10, timeUnit = TimeUnit.SECONDS)
 @Fork(2)
 @State(Scope.Benchmark)
-class TestBenchmark {
-
+abstract class SteBenchmark {
   var spark: SparkSession = _
   val tmp = System.getProperty("java.io.tmpdir")
-  val json = """{ "a": "1", "b": "str" }""" + "\n"
+  val data: String
 
-  @Setup def setup(): Unit = {
+  def setup(): Unit
+  def derived(): Unit
+  def inferred(): Unit
+
+  def writeBenchData(data: String, ext: String): Unit =
+    (1 to 1000).foreach { i =>
+      new PrintWriter(tmp + "/" + i + ext) {
+        write((if (ext == ".csv") "a,b\n" else "") + data * 100)
+        close
+      }
+    }
+
+  def initSparkSession(): Unit =
     spark = SparkSession.builder()
       .master("local")
-      .appName("Integration spec")
+      .appName("benchmark")
       .getOrCreate()
 
-    (1 to 1000).foreach { i =>
-      new PrintWriter(tmp + "/" + i + ".json") { write(json * 100); close }
-    }
+  @TearDown def tearDown(): Unit = if (spark != null) spark.stop()
+}
+
+class JsonBenchmark extends SteBenchmark {
+
+  override val data = """{ "a": "1", "b": "str" }""" + "\n"
+
+  @Setup override def setup(): Unit = {
+    initSparkSession()
+    writeBenchData(data, ".json")
   }
 
-  @TearDown def tearDown(): Unit = spark.stop()
-
-  @Benchmark def derived(): Unit = {
+  @Benchmark override def derived(): Unit = {
     val s2 = spark
     import s2.implicits._
     val derived = spark
@@ -66,12 +82,47 @@ class TestBenchmark {
       .collect()
   }
 
-  @Benchmark def inferred(): Unit = {
+  @Benchmark override def inferred(): Unit = {
     val s2 = spark
     import s2.implicits._
     val inferred = spark
       .read
       .json(tmp + "/*.json")
       .as[Foo]
+      .collect()
+  }
+}
+
+class CsvBenchmark extends SteBenchmark {
+
+  override val data = "\"1\",\"str\"" + "\n"
+
+  @Setup override def setup(): Unit = {
+    initSparkSession()
+    writeBenchData(data, ".csv")
+  }
+
+  @Benchmark override def derived(): Unit = {
+    val s2 = spark
+    import s2.implicits._
+    val derived = spark
+      .read
+      .schema(StructTypeEncoder[Foo].encode)
+      .option("header", "true")
+      .csv(tmp + "/*.csv")
+      .as[Foo]
+      .collect()
+  }
+
+  @Benchmark override def inferred(): Unit = {
+    val s2 = spark
+    import s2.implicits._
+    val inferred = spark
+      .read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(tmp + "/*.csv")
+      .as[Foo]
+      .collect()
   }
 }
