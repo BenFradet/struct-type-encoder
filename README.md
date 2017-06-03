@@ -24,7 +24,7 @@ val inferred = spark
   .as[MyCaseClass]
 ```
 
-In this case, there is no need to spend time inferring the schema as the DataFrame is directly 
+In this case, there is no need to spend time inferring the schema as the DataFrame is directly
 converted to a Dataset of `MyCaseClass`. However, it can be a lot of boilerplate to bypass the
 inference by specifying your own schema.
 
@@ -56,3 +56,19 @@ val derived = spark
 ```
 
 No inference, no boilerplate!
+
+## Benchmarks
+
+This project includes [JMH](http://openjdk.java.net/projects/code-tools/jmh/) benchmarks to prove
+that inferring schemas and coming up with the schema satisfying all records is expensive. The
+benchmarks compare the average time spent parsing a thousand files each containing a hundred rows
+when the schema is inferred (by Spark, not user-specified) and derived (thanks to
+struct-type-encoder).
+
+|   | derived | inferred |
+|:-:|:-:|:-:|
+| CSV  | 5.936 ± 0.035 s | 6.494 ± 0.209 s |
+| JSON | 5.092 ± 0.048 s | 6.019 ± 0.049 s |
+
+We see that when deriving the schemas we spend 16.7% less time reading JSON data and a 8.98% for
+CSV.
