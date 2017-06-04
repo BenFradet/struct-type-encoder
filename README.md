@@ -9,7 +9,7 @@ Deriving Spark DataFrame schemas from case classes.
 ## Motivation
 
 When reading a DataFrame/Dataset from a data source the schema of the data has to be inferred. In
-practice, this translates by looking at every record of all the files and coming up with a schema
+practice, this translates into looking at every record of all the files and coming up with a schema
 that can satisfy every one of these records, as shown [here for JSON](
 https://github.com/apache/spark/blob/master/sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/json/JsonInferSchema.scala).
 
