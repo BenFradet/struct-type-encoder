@@ -24,6 +24,7 @@ package ste
 import org.apache.spark.sql.types._
 import org.scalatest.{FlatSpec, Matchers}
 import shapeless.test.illTyped
+import ste.StructTypeEncoder._
 
 class StructTypeEncoderSpec extends FlatSpec with Matchers {
 
@@ -67,37 +68,30 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
   }
 
   it should "deal with nested products" in {
-    import StructTypeEncoder._
-    case class Foo(a: Int)
-    case class Bar(f: Foo, b: Int)
+    case class Foo(a: Int, b: Unit)
+    case class Bar(f: Foo, c: Int, d: Unit)
     StructTypeEncoder[Bar].encode shouldBe StructType(
-      StructField("f", StructType(StructField("a", IntegerType) :: Nil)) ::
-      StructField("b", IntegerType) :: Nil
+      StructField("f", StructType(
+        StructField("a", IntegerType) ::
+        StructField("b", NullType) :: Nil)) ::
+      StructField("c", IntegerType) ::
+      StructField("d", NullType) :: Nil
     )
   }
 
   it should "deal with tuples" in {
-    import StructTypeEncoder._
-    case class Foo(a: (String, Int))
+    case class Foo(a: (String, Int, Unit))
     StructTypeEncoder[Foo].encode shouldBe StructType(
       StructField("a", StructType(
         StructField("_1", StringType) ::
-        StructField("_2", IntegerType) :: Nil
+        StructField("_2", IntegerType) ::
+        StructField("_3", NullType) :: Nil
       )) :: Nil
     )
-    StructTypeEncoder[(String, Int)].encode shouldBe StructType(
+    StructTypeEncoder[(String, Int, Unit)].encode shouldBe StructType(
       StructField("_1", StringType) ::
-      StructField("_2", IntegerType) :: Nil
-    )
-  }
-
-  it should "pass" in {
-    import StructTypeEncoder._
-    case class Foo(a: Int, b: Unit)
-    case class Bar(f: Foo, c: Int, d: Unit)
-    StructTypeEncoder[Bar].encode shouldBe StructType(
-      StructField("f", StructType(StructField("a", IntegerType) :: StructField("b", NullType) :: Nil)) ::
-      StructField("c", IntegerType) :: StructField("d", NullType) :: Nil
+      StructField("_2", IntegerType) ::
+      StructField("_3", NullType) :: Nil
     )
   }
 

@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 
 import org.apache.spark.sql.SparkSession
 import org.openjdk.jmh.annotations._
-import ste._
+import ste.StructTypeEncoder._
 
 case class Foo(a: String, b: String)
 

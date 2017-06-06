@@ -39,7 +39,8 @@ lazy val structTypeEncoder = (project in file("."))
   .settings(
     initialCommands in console :=
       """
-        |import ste._
+        |import ste.StructTypeEncoder
+        |import ste.StructTypeEncoder._
       """.stripMargin
   )
   .aggregate(core, benchmarks)

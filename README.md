@@ -47,7 +47,8 @@ http://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.sql.ty
 Spark represents a schema) from your case class automatically:
 
 ```scala
-import ste._
+import ste.StructTypeEncoder
+import ste.StructTypeEncoder._
 val derived = spark
   .read
   .schema(StructTypeEncoder[MyCaseClass].encode)

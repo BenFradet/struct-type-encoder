@@ -40,35 +40,6 @@ object DataTypeEncoder {
 
   def pure[A](dt: DataType): DataTypeEncoder[A] =
     new DataTypeEncoder[A] { def encode: DataType = dt }
-
-  // primitive instances
-  implicit val binaryEncoder: DataTypeEncoder[Array[Byte]] = pure(BinaryType)
-  implicit val booleanEncoder: DataTypeEncoder[Boolean] = pure(BooleanType)
-  implicit val byteEncoder: DataTypeEncoder[Byte] = pure(ByteType)
-  implicit val dateEncoder: DataTypeEncoder[java.sql.Date] = pure(DateType)
-  implicit val decimalEncoder: DataTypeEncoder[BigDecimal] = pure(DecimalType.SYSTEM_DEFAULT)
-  implicit val doubleEncoder: DataTypeEncoder[Double] = pure(DoubleType)
-  implicit val floatEncoder: DataTypeEncoder[Float] = pure(FloatType)
-  implicit val intEncoder: DataTypeEncoder[Int] = pure(IntegerType)
-  implicit val longType: DataTypeEncoder[Long] = pure(LongType)
-  implicit val nullEncoder: DataTypeEncoder[Unit] = pure(NullType)
-  implicit val shortType: DataTypeEncoder[Short] = pure(ShortType)
-  implicit val stringEncoder: DataTypeEncoder[String] = pure(StringType)
-  implicit val timestampEncoder: DataTypeEncoder[java.sql.Timestamp] = pure(TimestampType)
-
-  // combinator instances
-  implicit def encodeTraversableOnce[A0, C[_]](
-    implicit
-    enc: DataTypeEncoder[A0],
-    is: IsTraversableOnce[C[A0]] { type A = A0 }
-  ): DataTypeEncoder[C[A0]] =
-    pure(ArrayType(enc.encode))
-  implicit def mapEncoder[K, V](
-    implicit
-    kEnc: DataTypeEncoder[K],
-    vEnc: DataTypeEncoder[V]
-  ): DataTypeEncoder[Map[K, V]] =
-    pure(MapType(kEnc.encode, vEnc.encode))
 }
 
 @annotation.implicitNotFound("""
@@ -79,20 +50,22 @@ sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
   def encode: StructType
 }
 
-object StructTypeEncoder {
+object StructTypeEncoder extends MediumPrioritiesImplicits {
   def apply[A](implicit enc: StructTypeEncoder[A]): StructTypeEncoder[A] = enc
 
   def pure[A](st: StructType): StructTypeEncoder[A] =
     new StructTypeEncoder[A] { def encode: StructType = st }
+}
 
-  implicit val hnilEncoder: StructTypeEncoder[HNil] = pure(StructType(Nil))
+trait LowPrioritiesImplicits {
+  implicit val hnilEncoder: StructTypeEncoder[HNil] = StructTypeEncoder.pure(StructType(Nil))
   implicit def hconsEncoder[K <: Symbol, H, T <: HList](
     implicit
     witness: Witness.Aux[K],
     hEncoder: Lazy[DataTypeEncoder[H]],
     tEncoder: StructTypeEncoder[T]
   ): StructTypeEncoder[FieldType[K, H] :: T] = {
-    pure {
+    StructTypeEncoder.pure {
       val fieldName = witness.value.name
       val head = hEncoder.value.encode
       val tail = tEncoder.encode
@@ -105,5 +78,49 @@ object StructTypeEncoder {
     generic: LabelledGeneric.Aux[A, H],
     hEncoder: Lazy[StructTypeEncoder[H]]
   ): StructTypeEncoder[A] =
-    pure(hEncoder.value.encode)
+    StructTypeEncoder.pure(hEncoder.value.encode)
+}
+
+trait MediumPrioritiesImplicits extends LowPrioritiesImplicits {
+  // primitive instances
+  implicit val binaryEncoder: DataTypeEncoder[Array[Byte]] =
+    DataTypeEncoder.pure(BinaryType)
+  implicit val booleanEncoder: DataTypeEncoder[Boolean] =
+    DataTypeEncoder.pure(BooleanType)
+  implicit val byteEncoder: DataTypeEncoder[Byte] =
+    DataTypeEncoder.pure(ByteType)
+  implicit val dateEncoder: DataTypeEncoder[java.sql.Date] =
+    DataTypeEncoder.pure(DateType)
+  implicit val decimalEncoder: DataTypeEncoder[BigDecimal] =
+    DataTypeEncoder.pure(DecimalType.SYSTEM_DEFAULT)
+  implicit val doubleEncoder: DataTypeEncoder[Double] =
+    DataTypeEncoder.pure(DoubleType)
+  implicit val floatEncoder: DataTypeEncoder[Float] =
+    DataTypeEncoder.pure(FloatType)
+  implicit val intEncoder: DataTypeEncoder[Int] =
+    DataTypeEncoder.pure(IntegerType)
+  implicit val longType: DataTypeEncoder[Long] =
+    DataTypeEncoder.pure(LongType)
+  implicit val nullEncoder: DataTypeEncoder[Unit] =
+    DataTypeEncoder.pure(NullType)
+  implicit val shortType: DataTypeEncoder[Short] =
+    DataTypeEncoder.pure(ShortType)
+  implicit val stringEncoder: DataTypeEncoder[String] =
+    DataTypeEncoder.pure(StringType)
+  implicit val timestampEncoder: DataTypeEncoder[java.sql.Timestamp] =
+    DataTypeEncoder.pure(TimestampType)
+
+  // combinator instances
+  implicit def encodeTraversableOnce[A0, C[_]](
+    implicit
+    enc: DataTypeEncoder[A0],
+    is: IsTraversableOnce[C[A0]] { type A = A0 }
+  ): DataTypeEncoder[C[A0]] =
+    DataTypeEncoder.pure(ArrayType(enc.encode))
+  implicit def mapEncoder[K, V](
+    implicit
+    kEnc: DataTypeEncoder[K],
+    vEnc: DataTypeEncoder[V]
+  ): DataTypeEncoder[Map[K, V]] =
+    DataTypeEncoder.pure(MapType(kEnc.encode, vEnc.encode))
 }
