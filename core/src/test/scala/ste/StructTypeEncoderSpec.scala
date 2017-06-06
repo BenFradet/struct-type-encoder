@@ -26,7 +26,6 @@ import org.scalatest.{FlatSpec, Matchers}
 import shapeless.test.illTyped
 
 class StructTypeEncoderSpec extends FlatSpec with Matchers {
-  import StructTypeEncoder._
 
   "A StructTypeEncoder" should "deal with the supported primitive types" in {
     case class Foo(a: Array[Byte], b: Boolean, c: Byte, d: java.sql.Date, e: BigDecimal, f: Double, 
@@ -47,10 +46,10 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
     )
   }
 
-  it should "work with Unit" ignore {
-    // pickec up by genericEncoder
-    case class A(a: Unit)
-    StructTypeEncoder[A].encode shouldBe StructType(StructField("a", NullType) :: Nil)
+  it should "work with Unit" in {
+    // picked up by genericEncoder
+    case class Foo(a: Unit)
+    StructTypeEncoder[Foo].encode shouldBe StructType(StructField("a", NullType) :: Nil)
   }
 
   it should "deal with the supported combinators" in {
@@ -68,6 +67,7 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
   }
 
   it should "deal with nested products" in {
+    import StructTypeEncoder._
     case class Foo(a: Int)
     case class Bar(f: Foo, b: Int)
     StructTypeEncoder[Bar].encode shouldBe StructType(
@@ -77,6 +77,7 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
   }
 
   it should "deal with tuples" in {
+    import StructTypeEncoder._
     case class Foo(a: (String, Int))
     StructTypeEncoder[Foo].encode shouldBe StructType(
       StructField("a", StructType(
@@ -87,6 +88,16 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
     StructTypeEncoder[(String, Int)].encode shouldBe StructType(
       StructField("_1", StringType) ::
       StructField("_2", IntegerType) :: Nil
+    )
+  }
+
+  it should "pass" in {
+    import StructTypeEncoder._
+    case class Foo(a: Int, b: Unit)
+    case class Bar(f: Foo, c: Int, d: Unit)
+    StructTypeEncoder[Bar].encode shouldBe StructType(
+      StructField("f", StructType(StructField("a", IntegerType) :: StructField("b", NullType) :: Nil)) ::
+      StructField("c", IntegerType) :: StructField("d", NullType) :: Nil
     )
   }
 

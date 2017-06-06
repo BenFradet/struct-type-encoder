@@ -76,7 +76,7 @@ object DataTypeEncoder {
   You need to define one yourself.
   """)
 sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
-  override def encode: StructType
+  def encode: StructType
 }
 
 object StructTypeEncoder {
@@ -92,8 +92,8 @@ object StructTypeEncoder {
     hEncoder: Lazy[DataTypeEncoder[H]],
     tEncoder: StructTypeEncoder[T]
   ): StructTypeEncoder[FieldType[K, H] :: T] = {
-    val fieldName = witness.value.name
     pure {
+      val fieldName = witness.value.name
       val head = hEncoder.value.encode
       val tail = tEncoder.encode
       StructType(StructField(fieldName, head) +: tail.fields)
