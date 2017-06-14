@@ -50,14 +50,14 @@ sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
   def encode: StructType
 }
 
-object StructTypeEncoder extends MediumPrioritiesImplicits {
+object StructTypeEncoder extends MediumPriorityImplicits {
   def apply[A](implicit enc: StructTypeEncoder[A]): StructTypeEncoder[A] = enc
 
   def pure[A](st: StructType): StructTypeEncoder[A] =
     new StructTypeEncoder[A] { def encode: StructType = st }
 }
 
-trait LowPrioritiesImplicits {
+trait LowPriorityImplicits {
   implicit val hnilEncoder: StructTypeEncoder[HNil] = StructTypeEncoder.pure(StructType(Nil))
   implicit def hconsEncoder[K <: Symbol, H, T <: HList](
     implicit
@@ -81,7 +81,7 @@ trait LowPrioritiesImplicits {
     StructTypeEncoder.pure(hEncoder.value.encode)
 }
 
-trait MediumPrioritiesImplicits extends LowPrioritiesImplicits {
+trait MediumPriorityImplicits extends LowPriorityImplicits {
   // primitive instances
   implicit val binaryEncoder: DataTypeEncoder[Array[Byte]] =
     DataTypeEncoder.pure(BinaryType)
