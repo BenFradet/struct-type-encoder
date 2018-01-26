@@ -33,13 +33,17 @@ import scala.collection.generic.IsTraversableOnce
   """)
 sealed trait DataTypeEncoder[A] {
   def encode: DataType
+  def nullable: Boolean
 }
 
 object DataTypeEncoder {
   def apply[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[A] = enc
 
-  def pure[A](dt: DataType): DataTypeEncoder[A] =
-    new DataTypeEncoder[A] { def encode: DataType = dt }
+  def pure[A](dt: DataType, isNullable: Boolean = false): DataTypeEncoder[A] =
+    new DataTypeEncoder[A] {
+      def encode: DataType = dt
+      def nullable: Boolean = isNullable
+    }
 }
 
 @annotation.implicitNotFound("""
@@ -53,8 +57,11 @@ sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
 object StructTypeEncoder extends MediumPriorityImplicits {
   def apply[A](implicit enc: StructTypeEncoder[A]): StructTypeEncoder[A] = enc
 
-  def pure[A](st: StructType): StructTypeEncoder[A] =
-    new StructTypeEncoder[A] { def encode: StructType = st }
+  def pure[A](st: StructType, isNullable: Boolean = false): StructTypeEncoder[A] =
+    new StructTypeEncoder[A] {
+      def encode: StructType = st
+      def nullable: Boolean = isNullable
+    }
 }
 
 trait LowPriorityImplicits {
@@ -68,8 +75,9 @@ trait LowPriorityImplicits {
     StructTypeEncoder.pure {
       val fieldName = witness.value.name
       val head = hEncoder.value.encode
+      val nullable = hEncoder.value.nullable
       val tail = tEncoder.encode
-      StructType(StructField(fieldName, head) +: tail.fields)
+      StructType(StructField(fieldName, head, nullable) +: tail.fields)
     }
   }
 
@@ -123,4 +131,9 @@ trait MediumPriorityImplicits extends LowPriorityImplicits {
     vEnc: DataTypeEncoder[V]
   ): DataTypeEncoder[Map[K, V]] =
     DataTypeEncoder.pure(MapType(kEnc.encode, vEnc.encode))
+  implicit def optionEncoder[V](
+    implicit
+    enc: DataTypeEncoder[V]
+  ): DataTypeEncoder[Option[V]] =
+    DataTypeEncoder.pure(enc.encode, true)
 }
