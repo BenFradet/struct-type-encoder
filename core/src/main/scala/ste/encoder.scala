@@ -52,6 +52,7 @@ object DataTypeEncoder {
   """)
 sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
   def encode: StructType
+  def nullable: Boolean
 }
 
 object StructTypeEncoder extends MediumPriorityImplicits {
