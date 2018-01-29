@@ -69,6 +69,10 @@ object StructTypeEncoder extends MediumPriorityImplicits {
     }
 }
 
+@annotation.implicitNotFound("""
+  Type ${A} does not have a AnnotatedStructTypeEncoder defined in the library.
+  You need to define one yourself.
+  """)
 sealed trait AnnotatedStructTypeEncoder[A] {
   import AnnotatedStructTypeEncoder._
 
