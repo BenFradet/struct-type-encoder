@@ -29,7 +29,7 @@ import scala.annotation.StaticAnnotation
 
 import scala.collection.generic.IsTraversableOnce
 
-final class MetaData(val metadata: Metadata) extends StaticAnnotation
+final class Meta(val metadata: Metadata) extends StaticAnnotation
 
 @annotation.implicitNotFound("""
   Type ${A} does not have a DataTypeEncoder defined in the library.
@@ -106,15 +106,15 @@ trait LowPriorityImplicits {
   implicit def recordEncoder[A, H <: HList, HA <: HList](
     implicit
     generic: LabelledGeneric.Aux[A, H],
-    annotations: Annotations.Aux[MetaData, A, HA],
+    annotations: Annotations.Aux[Meta, A, HA],
     hEncoder: Lazy[AnnotatedStructTypeEncoder[H]],
-    toList: ToList[HA, Option[MetaData]]
+    toList: ToList[HA, Option[Meta]]
   ): StructTypeEncoder[A] = {
-    val metadata = annotations().toList[Option[MetaData]].map(extractMetadata)
+    val metadata = annotations().toList[Option[Meta]].map(extractMetadata)
     StructTypeEncoder.pure(hEncoder.value.encode(metadata))
   }
 
-  private val extractMetadata: Option[MetaData] => Metadata =
+  private val extractMetadata: Option[Meta] => Metadata =
     _.map(_.metadata).getOrElse(Metadata.empty)
 }
 

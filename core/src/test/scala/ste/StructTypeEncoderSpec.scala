@@ -114,7 +114,7 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
       .putString("bar", "baz")
       .build
 
-    case class Foo(a: String, @MetaData(metadata) b: Int)
+    case class Foo(a: String, @Meta(metadata) b: Int)
     StructTypeEncoder[Foo].encode shouldBe StructType(
       StructField("a", StringType, false) ::
       StructField("b", IntegerType, false, metadata) :: Nil
