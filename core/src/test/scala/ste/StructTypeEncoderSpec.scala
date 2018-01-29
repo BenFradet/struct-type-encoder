@@ -30,68 +30,76 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
 
   "A StructTypeEncoder" should "deal with the supported primitive types" in {
     case class Foo(a: Array[Byte], b: Boolean, c: Byte, d: java.sql.Date, e: BigDecimal, f: Double, 
-      g: Float, h: Int, i: Long, j: Short, k: String, l: java.sql.Timestamp)
+      g: Float, h: Int, i: Long, j: Short, k: String, l: java.sql.Timestamp, m: Option[Int])
     StructTypeEncoder[Foo].encode shouldBe StructType(
-      StructField("a", BinaryType) ::
-      StructField("b", BooleanType) ::
-      StructField("c", ByteType) ::
-      StructField("d", DateType) ::
-      StructField("e", DecimalType.SYSTEM_DEFAULT) ::
-      StructField("f", DoubleType) ::
-      StructField("g", FloatType) ::
-      StructField("h", IntegerType) ::
-      StructField("i", LongType) ::
-      StructField("j", ShortType) ::
-      StructField("k", StringType) ::
-      StructField("l", TimestampType) :: Nil
+      StructField("a", BinaryType, false) ::
+      StructField("b", BooleanType, false) ::
+      StructField("c", ByteType, false) ::
+      StructField("d", DateType, false) ::
+      StructField("e", DecimalType.SYSTEM_DEFAULT, false) ::
+      StructField("f", DoubleType, false) ::
+      StructField("g", FloatType, false) ::
+      StructField("h", IntegerType, false) ::
+      StructField("i", LongType, false) ::
+      StructField("j", ShortType, false) ::
+      StructField("k", StringType, false) ::
+      StructField("l", TimestampType, false) ::
+      StructField("m", IntegerType, true) :: Nil
     )
   }
 
   it should "work with Unit" in {
     // picked up by genericEncoder
     case class Foo(a: Unit)
-    StructTypeEncoder[Foo].encode shouldBe StructType(StructField("a", NullType) :: Nil)
+    StructTypeEncoder[Foo].encode shouldBe StructType(StructField("a", NullType, false) :: Nil)
   }
 
   it should "deal with the supported combinators" in {
     case class Foo(a: Seq[Int], b: List[Int], c: Set[Int], d: Vector[Int], e: Array[Int])
     StructTypeEncoder[Foo].encode shouldBe StructType(
-      StructField("a", ArrayType(IntegerType)) ::
-      StructField("b", ArrayType(IntegerType)) ::
-      StructField("c", ArrayType(IntegerType)) ::
-      StructField("d", ArrayType(IntegerType)) ::
-      StructField("e", ArrayType(IntegerType)) :: Nil
+      StructField("a", ArrayType(IntegerType), false) ::
+      StructField("b", ArrayType(IntegerType), false) ::
+      StructField("c", ArrayType(IntegerType), false) ::
+      StructField("d", ArrayType(IntegerType), false) ::
+      StructField("e", ArrayType(IntegerType), false) :: Nil
     )
     case class Bar(a: Map[Int, String])
     StructTypeEncoder[Bar].encode shouldBe
-      StructType(StructField("a", MapType(IntegerType, StringType)) :: Nil)
+      StructType(StructField("a", MapType(IntegerType, StringType), false) :: Nil)
   }
 
   it should "deal with nested products" in {
     case class Foo(a: Int, b: Unit)
-    case class Bar(f: Foo, c: Int, d: Unit)
+    case class Bar(f: Foo, fOpt: Option[Foo], c: Int, d: Unit)
+    val fooEncoded = StructType(
+      StructField("a", IntegerType, false) ::
+      StructField("b", NullType, false) :: Nil
+    )
     StructTypeEncoder[Bar].encode shouldBe StructType(
-      StructField("f", StructType(
-        StructField("a", IntegerType) ::
-        StructField("b", NullType) :: Nil)) ::
-      StructField("c", IntegerType) ::
-      StructField("d", NullType) :: Nil
+      StructField("f", fooEncoded, false) ::
+      StructField("fOpt", fooEncoded, true) ::
+      StructField("c", IntegerType, false) ::
+      StructField("d", NullType, false) :: Nil
     )
   }
 
   it should "deal with tuples" in {
-    case class Foo(a: (String, Int, Unit))
+    case class Foo(a: (String, Int, Unit), b: Option[(String, Int)])
     StructTypeEncoder[Foo].encode shouldBe StructType(
       StructField("a", StructType(
-        StructField("_1", StringType) ::
-        StructField("_2", IntegerType) ::
-        StructField("_3", NullType) :: Nil
-      )) :: Nil
+        StructField("_1", StringType, false) ::
+        StructField("_2", IntegerType, false) ::
+        StructField("_3", NullType, false) :: Nil
+      ), false) ::
+      StructField("b", StructType(
+        StructField("_1", StringType, false) ::
+        StructField("_2", IntegerType, false) :: Nil
+      ), true) :: Nil
     )
     StructTypeEncoder[(String, Int, Unit)].encode shouldBe StructType(
-      StructField("_1", StringType) ::
-      StructField("_2", IntegerType) ::
-      StructField("_3", NullType) :: Nil
+      StructField("_1", StringType, false) ::
+      StructField("_2", IntegerType, false) ::
+      StructField("_3", NullType, false) :: Nil
     )
   }
 
