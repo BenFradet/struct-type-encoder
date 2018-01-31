@@ -23,9 +23,13 @@ package ste
 
 import org.apache.spark.sql.types._
 import shapeless._
+import shapeless.ops.hlist._
 import shapeless.labelled.FieldType
+import scala.annotation.StaticAnnotation
 
 import scala.collection.generic.IsTraversableOnce
+
+final class Meta(val metadata: Metadata) extends StaticAnnotation
 
 @annotation.implicitNotFound("""
   Type ${A} does not have a DataTypeEncoder defined in the library.
@@ -65,29 +69,53 @@ object StructTypeEncoder extends MediumPriorityImplicits {
     }
 }
 
+@annotation.implicitNotFound("""
+  Type ${A} does not have a AnnotatedStructTypeEncoder defined in the library.
+  You need to define one yourself.
+  """)
+sealed trait AnnotatedStructTypeEncoder[A] {
+  import AnnotatedStructTypeEncoder._
+
+  val encode: Encode
+}
+
+object AnnotatedStructTypeEncoder extends MediumPriorityImplicits {
+  type Encode = Seq[Metadata] => StructType
+
+  def pure[A](enc: Encode): AnnotatedStructTypeEncoder[A] =
+    new AnnotatedStructTypeEncoder[A] {
+      val encode = enc
+    }
+}
+
 trait LowPriorityImplicits {
-  implicit val hnilEncoder: StructTypeEncoder[HNil] = StructTypeEncoder.pure(StructType(Nil))
+  implicit val hnilEncoder: AnnotatedStructTypeEncoder[HNil] = AnnotatedStructTypeEncoder.pure(_ => StructType(Nil))
   implicit def hconsEncoder[K <: Symbol, H, T <: HList](
     implicit
     witness: Witness.Aux[K],
     hEncoder: Lazy[DataTypeEncoder[H]],
-    tEncoder: StructTypeEncoder[T]
-  ): StructTypeEncoder[FieldType[K, H] :: T] = {
-    StructTypeEncoder.pure {
-      val fieldName = witness.value.name
-      val head = hEncoder.value.encode
-      val nullable = hEncoder.value.nullable
-      val tail = tEncoder.encode
-      StructType(StructField(fieldName, head, nullable) +: tail.fields)
-    }
+    tEncoder: AnnotatedStructTypeEncoder[T]
+  ): AnnotatedStructTypeEncoder[FieldType[K, H] :: T] = AnnotatedStructTypeEncoder.pure { metadata => 
+    val fieldName = witness.value.name
+    val head = hEncoder.value.encode
+    val nullable = hEncoder.value.nullable
+    val tail = tEncoder.encode(metadata.tail)
+    StructType(StructField(fieldName, head, nullable, metadata.head) +: tail.fields)
   }
 
-  implicit def genericEncoder[A, H <: HList](
+  implicit def recordEncoder[A, H <: HList, HA <: HList](
     implicit
     generic: LabelledGeneric.Aux[A, H],
-    hEncoder: Lazy[StructTypeEncoder[H]]
-  ): StructTypeEncoder[A] =
-    StructTypeEncoder.pure(hEncoder.value.encode)
+    annotations: Annotations.Aux[Meta, A, HA],
+    hEncoder: Lazy[AnnotatedStructTypeEncoder[H]],
+    toList: ToList[HA, Option[Meta]]
+  ): StructTypeEncoder[A] = {
+    val metadata = annotations().toList[Option[Meta]].map(extractMetadata)
+    StructTypeEncoder.pure(hEncoder.value.encode(metadata))
+  }
+
+  private val extractMetadata: Option[Meta] => Metadata =
+    _.map(_.metadata).getOrElse(Metadata.empty)
 }
 
 trait MediumPriorityImplicits extends LowPriorityImplicits {

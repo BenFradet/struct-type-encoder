@@ -107,4 +107,17 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
     class Foo(a: Int)
     illTyped { """StructTypeEncoder[Foo].encode""" }
   }
+
+  it should "deal with annotations" in {
+    val metadata = new MetadataBuilder()
+      .putLong("foo", 10)
+      .putString("bar", "baz")
+      .build
+
+    case class Foo(a: String, @Meta(metadata) b: Int)
+    StructTypeEncoder[Foo].encode shouldBe StructType(
+      StructField("a", StringType, false) ::
+      StructField("b", IntegerType, false, metadata) :: Nil
+    )
+  }
 }
