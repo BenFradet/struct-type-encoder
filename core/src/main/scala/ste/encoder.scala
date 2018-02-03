@@ -30,7 +30,7 @@ import scala.annotation.StaticAnnotation
 import scala.collection.generic.IsTraversableOnce
 
 final class Meta(val metadata: Metadata) extends StaticAnnotation
-final case class Flattened(times: Int = 1, keys: Seq[String] = Seq()) extends StaticAnnotation
+final case class Flatten(times: Int = 1, keys: Seq[String] = Seq()) extends StaticAnnotation
 
 @annotation.implicitNotFound("""
   Type ${A} does not have a DataTypeEncoder defined in the library.
@@ -85,7 +85,7 @@ sealed trait AnnotatedStructTypeEncoder[A] {
 }
 
 object AnnotatedStructTypeEncoder extends MediumPriorityImplicits {
-  type Encode = (Seq[Metadata], Seq[Option[Flattened]]) => StructType
+  type Encode = (Seq[Metadata], Seq[Option[Flatten]]) => StructType
 
   def pure[A](enc: Encode): AnnotatedStructTypeEncoder[A] =
     new AnnotatedStructTypeEncoder[A] {
@@ -101,22 +101,22 @@ trait LowPriorityImplicits {
     witness: Witness.Aux[K],
     hEncoder: Lazy[DataTypeEncoder[H]],
     tEncoder: AnnotatedStructTypeEncoder[T]
-  ): AnnotatedStructTypeEncoder[FieldType[K, H] :: T] = AnnotatedStructTypeEncoder.pure { (metadata, flattened) =>
+  ): AnnotatedStructTypeEncoder[FieldType[K, H] :: T] = AnnotatedStructTypeEncoder.pure { (metadata, flatten) =>
     val fieldName = witness.value.name
     val dt = hEncoder.value.encode
-    val fields = flattened.head.flatMap(f => hEncoder.value.fields.map(flattenFields(_, dt, fieldName, f))).getOrElse(
+    val fields = flatten.head.flatMap(f => hEncoder.value.fields.map(flattenFields(_, dt, fieldName, f))).getOrElse(
       Seq(StructField(fieldName, dt, hEncoder.value.nullable, metadata.head)))
-    val tail = tEncoder.encode(metadata.tail, flattened.tail)
+    val tail = tEncoder.encode(metadata.tail, flatten.tail)
     StructType(fields ++ tail.fields)
   }
 
-  private def flattenFields(fields: Seq[StructField], dt: DataType, prefix: String, flattened: Flattened) =
-    (dt, flattened) match {
-      case (_: ArrayType, Flattened(times, _)) if times > 1 =>
+  private def flattenFields(fields: Seq[StructField], dt: DataType, prefix: String, flatten: Flatten) =
+    (dt, flatten) match {
+      case (_: ArrayType, Flatten(times, _)) if times > 1 =>
         (0 until times).flatMap(i => fields.map(prefixStructField(_, s"$prefix.$i")))
-      case (_: MapType, Flattened(_, keys)) if keys.nonEmpty =>
+      case (_: MapType, Flatten(_, keys)) if keys.nonEmpty =>
         keys.flatMap(k => fields.map(prefixStructField(_, s"$prefix.$k")))
-      case (_, Flattened(_, _)) => fields.map(prefixStructField(_, prefix))
+      case (_, Flatten(_, _)) => fields.map(prefixStructField(_, prefix))
     }
 
   private def prefixStructField(f: StructField, prefix: String) =
@@ -126,14 +126,14 @@ trait LowPriorityImplicits {
     implicit
     generic: LabelledGeneric.Aux[A, H],
     metaAnnotations: Annotations.Aux[Meta, A, HA],
-    flattenedAnnotations: Annotations.Aux[Flattened, A, HF],
+    flattenAnnotations: Annotations.Aux[Flatten, A, HF],
     hEncoder: Lazy[AnnotatedStructTypeEncoder[H]],
     metaToList: ToList[HA, Option[Meta]],
-    flattenedToList: ToList[HF, Option[Flattened]]
+    flattenToList: ToList[HF, Option[Flatten]]
   ): StructTypeEncoder[A] = {
     val metadata = metaAnnotations().toList[Option[Meta]].map(extractMetadata)
-    val flattened = flattenedAnnotations().toList[Option[Flattened]]
-    StructTypeEncoder.pure(hEncoder.value.encode(metadata, flattened))
+    val flatten = flattenAnnotations().toList[Option[Flatten]]
+    StructTypeEncoder.pure(hEncoder.value.encode(metadata, flatten))
   }
 
   private val extractMetadata: Option[Meta] => Metadata =
