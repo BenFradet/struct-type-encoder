@@ -103,19 +103,21 @@ trait LowPriorityImplicits {
     tEncoder: AnnotatedStructTypeEncoder[T]
   ): AnnotatedStructTypeEncoder[FieldType[K, H] :: T] = AnnotatedStructTypeEncoder.pure { (metadata, flattened) =>
     val fieldName = witness.value.name
-    val fields = flattened.head.flatMap(f => hEncoder.value.fields.map(flattenFields(_, fieldName, f))).getOrElse(
-      Seq(StructField(fieldName, hEncoder.value.encode, hEncoder.value.nullable, metadata.head)))
+    val dt = hEncoder.value.encode
+    val fields = flattened.head.flatMap(f => hEncoder.value.fields.map(flattenFields(_, dt, fieldName, f))).getOrElse(
+      Seq(StructField(fieldName, dt, hEncoder.value.nullable, metadata.head)))
     val tail = tEncoder.encode(metadata.tail, flattened.tail)
     StructType(fields ++ tail.fields)
   }
 
-  private def flattenFields(fields: Seq[StructField], prefix: String, flattened: Flattened) = flattened match {
-    case Flattened(times, _) if times > 1 =>
-      (0 until times).flatMap(i => fields.map(prefixStructField(_, s"$prefix$i")))
-    case Flattened(_, keys) if keys.nonEmpty =>
-      keys.flatMap(k => fields.map(prefixStructField(_, s"$k.$prefix")))
-    case Flattened(_, _) => fields.map(prefixStructField(_, prefix))
-  }
+  private def flattenFields(fields: Seq[StructField], dt: DataType, prefix: String, flattened: Flattened) =
+    (dt, flattened) match {
+      case (_: ArrayType, Flattened(times, _)) if times > 1 =>
+        (0 until times).flatMap(i => fields.map(prefixStructField(_, s"$prefix$i")))
+      case (_: MapType, Flattened(_, keys)) if keys.nonEmpty =>
+        keys.flatMap(k => fields.map(prefixStructField(_, s"$k.$prefix")))
+      case (_, Flattened(_, _)) => fields.map(prefixStructField(_, prefix))
+    }
 
   private def prefixStructField(f: StructField, prefix: String) =
     f.copy(name = s"$prefix.${f.name}")
