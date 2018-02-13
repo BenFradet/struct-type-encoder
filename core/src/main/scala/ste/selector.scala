@@ -111,9 +111,9 @@ trait SelectorImplicits {
         val cols = fields.filter(_.isChildrenOf(p)).map(f => dfHead(f.quotedString).as(f.getSuffix))
         struct(cols :_*).as(p.toString)
       }
-      val dfS = dfHead.select((structs ++ restCols) :_*)
-      val nestedCols = getNestedColumns(childPrefixes, dfS, fl)
-      orderedSelect(dfS, nestedCols, fields)
+      val dfStruct = dfHead.select((structs ++ restCols) :_*)
+      val nestedCols = getNestedColumns(childPrefixes, dfStruct, fl)
+      orderedSelect(dfStruct, nestedCols, fields)
     }.getOrElse(dfHead)
     tSelector.select(dfNested, parentPrefixes, flatten.tail)
   }
