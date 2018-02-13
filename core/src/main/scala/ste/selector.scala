@@ -206,12 +206,6 @@ trait SelectorImplicits {
 
   implicit def mapSelector[K, V](
     implicit s: DataTypeSelector[V]
-  ): DataTypeSelector[collection.Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
-    s.select(df, prefixes)
-  }
-
-  implicit def immutableMapSelector[K, V](
-    implicit s: DataTypeSelector[V]
   ): DataTypeSelector[Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
     s.select(df, prefixes)
   }

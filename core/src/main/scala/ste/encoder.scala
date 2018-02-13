@@ -180,12 +180,6 @@ trait MediumPriorityImplicits extends LowPriorityImplicits {
     implicit
     kEnc: DataTypeEncoder[K],
     vEnc: DataTypeEncoder[V]
-  ): DataTypeEncoder[collection.Map[K, V]] =
-    DataTypeEncoder.pure(MapType(kEnc.encode, vEnc.encode), vEnc.fields)
-  implicit def immutableMapEncoder[K, V](
-    implicit
-    kEnc: DataTypeEncoder[K],
-    vEnc: DataTypeEncoder[V]
   ): DataTypeEncoder[Map[K, V]] =
     DataTypeEncoder.pure(MapType(kEnc.encode, vEnc.encode), vEnc.fields)
   implicit def optionEncoder[V](

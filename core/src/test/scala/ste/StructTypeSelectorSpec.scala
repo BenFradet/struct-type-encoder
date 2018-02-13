@@ -86,7 +86,7 @@ class StructSelectorSpec extends FlatSpec with Matchers {
 
 object StructSelectorSpec {
   case class Foo(a: Int, b: String)
-  case class Bar(@Flatten(1, Seq("asd", "qwe")) foo: collection.Map[String, Foo], c: Int)
+  case class Bar(@Flatten(1, Seq("asd", "qwe")) foo: Map[String, Foo], c: Int)
   case class Baz(@Flatten(2) bar: Seq[Bar], e: Int)
   case class Asd(@Flatten foo: Foo, x: Int)
 }
