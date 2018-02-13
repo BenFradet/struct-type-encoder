@@ -193,8 +193,6 @@ trait SelectorImplicits {
 }
 
 object DFUtils {
-  import StructTypeSelector._
-
   implicit class EnhancedDF(df: DataFrame) {
     def asNested[A : Encoder : StructTypeSelector]: Dataset[A] = StructTypeSelector[A].select(df, None).as[A]
   }
