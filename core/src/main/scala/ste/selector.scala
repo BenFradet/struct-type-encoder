@@ -11,16 +11,6 @@ import shapeless.ops.hlist._
 import shapeless.syntax.std.tuple._
 import shapeless.labelled.FieldType
 
-@annotation.implicitNotFound("""
-  Type ${A} does not have a DataTypeSelector defined in the library.
-  You need to define one yourself.
-  """)
-sealed trait DataTypeSelector[A] {
-  import DataTypeSelector.Select
-
-  val select: Select
-}
-
 case class Prefix(p: String) {
   def addSuffix(s: Any) = Prefix(s"$p.$s")
   def getParent = Prefix(p.split("\\.").dropRight(1).mkString("."))
@@ -29,6 +19,16 @@ case class Prefix(p: String) {
   def isChildrenOf(other: Prefix) = other.isParentOf(this)
   def quotedString = s"`$p`"
   override def toString = p
+}
+
+@annotation.implicitNotFound("""
+  Type ${A} does not have a DataTypeSelector defined in the library.
+  You need to define one yourself.
+  """)
+sealed trait DataTypeSelector[A] {
+  import DataTypeSelector.Select
+
+  val select: Select
 }
 
 object DataTypeSelector {
