@@ -28,6 +28,7 @@ lazy val baseSettings = Seq(
   ) ++ Seq(
     "org.scalatest" %% "scalatest" % scalatestVersion
   ).map(_ % "test"),
+  parallelExecution in Test := false,
   scalacOptions ++= compilerOptions
 )
 
