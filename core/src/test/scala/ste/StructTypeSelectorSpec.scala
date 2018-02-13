@@ -34,6 +34,18 @@ class StructSelectorSpec extends FlatSpec with Matchers {
   import StructSelectorSpec._
   val spark = SparkSession.builder().master("local").getOrCreate()
 
+  "selectNested" should "return the nested DataFrame" in {
+    import spark.implicits._
+    val values = List((1, "a", 2, "b", 3), (4, "c", 5, "d", 6))
+    val df = values.toDF(StructTypeEncoder[Bar].encode.fields.map(_.name) :_*)
+    val result = selectNested[Bar](df)
+    val expected = Array(
+      Bar(Map("asd" -> Foo(1, "a"), "qwe" -> Foo(2, "b")), 3),
+      Bar(Map("asd" -> Foo(4, "c"), "qwe" -> Foo(5, "d")), 6)
+    )
+    result.as[Bar].collect shouldEqual expected
+  }
+
   it should "deal with flattened struct" in {
     import spark.implicits._
     val values = List((1, "a", 2), (3, "b", 4))

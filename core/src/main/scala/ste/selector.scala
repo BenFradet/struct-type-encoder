@@ -212,7 +212,9 @@ trait SelectorImplicits {
 }
 
 object DFUtils {
-  implicit class EnhancedDF(df: DataFrame) {
-    def asNested[A : Encoder : StructTypeSelector]: Dataset[A] = StructTypeSelector[A].select(df, None).as[A]
+  def selectNested[A](df: DataFrame)(implicit s: StructTypeSelector[A]): DataFrame = s.select(df, None)
+
+  implicit class FlattenedDataFrame(df: DataFrame) {
+    def asNested[A : Encoder : StructTypeSelector]: Dataset[A] = selectNested(df).as[A]
   }
 }
