@@ -53,7 +53,7 @@ sealed trait DataTypeSelector[A] {
 }
 
 object DataTypeSelector {
-  type Prefixes = Seq[Prefix]
+  type Prefixes = List[Prefix]
   type Select = (DataFrame, Option[Prefixes]) => DataFrame
 
   def pure[A](s: Select): DataTypeSelector[A] =
@@ -120,11 +120,11 @@ trait SelectorImplicits {
     tSelector: AnnotatedStructTypeSelector[T]
   ): AnnotatedStructTypeSelector[FieldType[K, H] :: T] = AnnotatedStructTypeSelector.pure { (df, parentPrefixes, flatten) =>
     val fieldName = witness.value.name
-    val prefixes = parentPrefixes.map(_.map(_.addSuffix(fieldName))).getOrElse(Seq(Prefix(fieldName)))
+    val prefixes = parentPrefixes.map(_.map(_.addSuffix(fieldName))).getOrElse(List(Prefix(fieldName)))
     val childPrefixes = getChildPrefixes(prefixes, flatten.head)
     val dfHead = hSelector.value.select(df, Some(childPrefixes))
     val dfNested = flatten.head.map { fl =>
-      val fields = dfHead.schema.fields.map(f => Prefix(f.name)).toSeq
+      val fields = dfHead.schema.fields.map(f => Prefix(f.name)).toList
       val restCols = fields.filter(f => !childPrefixes.exists(_.isParentOf(f))).map(f => dfHead(f.quotedString))
       val structs = childPrefixes.map { p =>
         val cols = fields.filter(_.isChildrenOf(p)).map(f => dfHead(f.quotedString).as(f.getSuffix))
@@ -137,14 +137,14 @@ trait SelectorImplicits {
     tSelector.select(dfNested, parentPrefixes, flatten.tail)
   }
 
-  private def getChildPrefixes(prefixes: Seq[Prefix], flatten: Option[Flatten]) =
-    flatten.map(_ match {
-      case Flatten(times, _) if times > 1 => (0 until times).flatMap(i => prefixes.map(_.addSuffix(i)))
-      case Flatten(_, keys) if keys.nonEmpty => keys.flatMap(k => prefixes.map(_.addSuffix(k)))
+  private def getChildPrefixes(prefixes: List[Prefix], flatten: Option[Flatten]): List[Prefix] =
+    flatten.map {
+      case Flatten(times, _) if times > 1 => (0 until times).flatMap(i => prefixes.map(_.addSuffix(i))).toList
+      case Flatten(_, keys) if keys.nonEmpty => keys.flatMap(k => prefixes.map(_.addSuffix(k))).toList
       case Flatten(_, _) => prefixes
-    }).getOrElse(prefixes)
+    }.getOrElse(prefixes)
 
-  private def getNestedColumns(prefixes: Seq[Prefix], df: DataFrame, flatten: Flatten): Map[Prefix, Column] =
+  private def getNestedColumns(prefixes: List[Prefix], df: DataFrame, flatten: Flatten): Map[Prefix, Column] =
     prefixes.groupBy(_.getParent).map { case (prefix, groupedPrefixes) =>
       val colName = prefix.toString
       val cols = groupedPrefixes.map(p => df(p.quotedString))
@@ -155,16 +155,16 @@ trait SelectorImplicits {
       }
     }(breakOut)
 
-  private def orderedSelect(df: DataFrame, nestedCols: Map[Prefix, Column], fields: Seq[Prefix]) = {
+  private def orderedSelect(df: DataFrame, nestedCols: Map[Prefix, Column], fields: List[Prefix]): DataFrame = {
     @tailrec
-    def loop(nestedCols: Map[Prefix, Column], fields: Seq[Prefix], cols: Seq[Column]): Seq[Column] = fields match {
+    def loop(nestedCols: Map[Prefix, Column], fields: List[Prefix], cols: List[Column]): List[Column] = fields match {
       case Nil => cols.reverse
       case hd +: tail => nestedCols.find { case (p, _) => p.isParentOf(hd) } match {
         case Some((p, c)) => loop(nestedCols - p, fields.dropWhile(_.isChildrenOf(p)), c +: cols)
         case None => loop(nestedCols, tail, df(hd.quotedString) +: cols)
       }
     }
-    val cols = loop(nestedCols, fields, Seq[Column]())
+    val cols = loop(nestedCols, fields, List[Column]())
     df.select(cols :_*)
   }
 
@@ -207,6 +207,12 @@ trait SelectorImplicits {
   implicit def mapSelector[K, V](
     implicit s: DataTypeSelector[V]
   ): DataTypeSelector[collection.Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
+    s.select(df, prefixes)
+  }
+
+  implicit def immutableMapSelector[K, V](
+    implicit s: DataTypeSelector[V]
+  ): DataTypeSelector[Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
     s.select(df, prefixes)
   }
 }
