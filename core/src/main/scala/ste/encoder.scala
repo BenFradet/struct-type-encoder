@@ -110,7 +110,7 @@ trait LowPriorityImplicits {
     StructType(fields ++ tail.fields)
   }
 
-  private def flattenFields(fields: Seq[StructField], dt: DataType, prefix: String, flatten: Flatten) =
+  private def flattenFields(fields: Seq[StructField], dt: DataType, prefix: String, flatten: Flatten): Seq[StructField] =
     (dt, flatten) match {
       case (_: ArrayType, Flatten(times, _)) if times > 1 =>
         (0 until times).flatMap(i => fields.map(prefixStructField(_, s"$prefix.$i")))
