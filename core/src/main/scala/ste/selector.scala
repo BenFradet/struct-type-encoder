@@ -187,7 +187,7 @@ trait SelectorImplicits {
 
   implicit def mapSelector[K, V](
     implicit s: DataTypeSelector[V]
-  ): DataTypeSelector[scala.collection.Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
+  ): DataTypeSelector[collection.Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
     s.select(df, prefixes)
   }
 }
