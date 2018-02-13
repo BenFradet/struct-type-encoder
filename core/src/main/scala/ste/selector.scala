@@ -35,8 +35,6 @@ object DataTypeSelector {
   type Prefixes = Seq[Prefix]
   type Select = (DataFrame, Option[Prefixes]) => DataFrame
 
-  def apply[A](implicit enc: DataTypeSelector[A]): DataTypeSelector[A] = enc
-
   def pure[A](s: Select): DataTypeSelector[A] =
     new DataTypeSelector[A] {
       val select: Select = s
