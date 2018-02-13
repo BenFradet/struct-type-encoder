@@ -29,7 +29,7 @@ import scala.annotation.StaticAnnotation
 
 import scala.collection.generic.IsTraversableOnce
 
-final class Meta(val metadata: Metadata) extends StaticAnnotation
+final case class Meta(metadata: Metadata) extends StaticAnnotation
 final case class Flatten(times: Int = 1, keys: Seq[String] = Seq()) extends StaticAnnotation
 
 @annotation.implicitNotFound("""
