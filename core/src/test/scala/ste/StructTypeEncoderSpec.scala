@@ -115,7 +115,7 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
       .build
 
     case class Foo(a: String, @Meta(metadata) b: Int)
-    case class Bar(@Flatten(2) a: Seq[Foo], @Flatten(1, Seq("x", "y")) b: collection.Map[Symbol, Foo], @Flatten c: Foo)
+    case class Bar(@Flatten(2) a: Seq[Foo], @Flatten(1, Seq("x", "y")) b: collection.Map[String, Foo], @Flatten c: Foo)
     StructTypeEncoder[Bar].encode shouldBe StructType(
       StructField("a.0.a", StringType, false) ::
       StructField("a.0.b", IntegerType, false, metadata) ::
