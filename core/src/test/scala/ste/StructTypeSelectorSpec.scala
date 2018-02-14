@@ -37,7 +37,7 @@ class StructSelectorSpec extends FlatSpec with Matchers {
     import spark.implicits._
     val values = List((1, "a", 2, "b", 3), (4, "c", 5, "d", 6))
     val df = values.toDF(StructTypeEncoder[Bar].encode.fields.map(_.name) :_*)
-    val result = selectNested[Bar](df)
+    val result = df.selectNested[Bar]
     val expected = Array(
       Bar(Map("asd" -> Foo(1, "a"), "qwe" -> Foo(2, "b")), 3),
       Bar(Map("asd" -> Foo(4, "c"), "qwe" -> Foo(5, "d")), 6)
