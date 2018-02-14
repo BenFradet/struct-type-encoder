@@ -24,7 +24,7 @@ lazy val scalatestVersion = "3.0.1"
 lazy val baseSettings = Seq(
   libraryDependencies ++= Seq(
     "com.chuusai" %% "shapeless" % shapelessVersion,
-    "org.apache.spark" %% "spark-sql" % sparkVersion
+    "org.apache.spark" %% "spark-sql" % sparkVersion % "provided"
   ) ++ Seq(
     "org.scalatest" %% "scalatest" % scalatestVersion
   ).map(_ % "test"),
