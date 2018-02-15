@@ -90,6 +90,7 @@ lazy val benchmarks = project
   .enablePlugins(JmhPlugin)
   .settings(allSettings)
   .settings(noPublishSettings)
+  .settings(libraryDependencies ++= Seq("org.apache.spark" %% "spark-sql" % sparkVersion))
   .settings(
     javaOptions in run ++= Seq(
       "-Djava.net.preferIPv4Stack=true",
