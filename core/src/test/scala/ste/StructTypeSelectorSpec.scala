@@ -29,6 +29,13 @@ import StructTypeEncoder._
 import StructTypeSelector._
 import DFUtils._
 
+object StructSelectorSpec {
+  case class Foo(a: Int, b: String)
+  case class Bar(@Flatten(1, Seq("asd", "qwe")) foo: Map[String, Foo], c: Int)
+  case class Baz(@Flatten(2) bar: Seq[Bar], e: Int)
+  case class Asd(@Flatten foo: Foo, x: Int)
+}
+
 class StructSelectorSpec extends FlatSpec with Matchers {
   import StructSelectorSpec._
   val spark = SparkSession.builder().master("local").getOrCreate()
@@ -82,11 +89,4 @@ class StructSelectorSpec extends FlatSpec with Matchers {
     )
     result shouldEqual expected
   }
-}
-
-object StructSelectorSpec {
-  case class Foo(a: Int, b: String)
-  case class Bar(@Flatten(1, Seq("asd", "qwe")) foo: Map[String, Foo], c: Int)
-  case class Baz(@Flatten(2) bar: Seq[Bar], e: Int)
-  case class Asd(@Flatten foo: Foo, x: Int)
 }
