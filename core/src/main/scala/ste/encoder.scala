@@ -29,7 +29,8 @@ import scala.annotation.StaticAnnotation
 
 import scala.collection.generic.IsTraversableOnce
 
-final class Meta(val metadata: Metadata) extends StaticAnnotation
+final case class Meta(metadata: Metadata) extends StaticAnnotation
+final case class Flatten(times: Int = 1, keys: Seq[String] = Seq()) extends StaticAnnotation
 
 @annotation.implicitNotFound("""
   Type ${A} does not have a DataTypeEncoder defined in the library.
@@ -37,15 +38,17 @@ final class Meta(val metadata: Metadata) extends StaticAnnotation
   """)
 sealed trait DataTypeEncoder[A] {
   def encode: DataType
+  def fields: Option[Seq[StructField]]
   def nullable: Boolean
 }
 
 object DataTypeEncoder {
   def apply[A](implicit enc: DataTypeEncoder[A]): DataTypeEncoder[A] = enc
 
-  def pure[A](dt: DataType, isNullable: Boolean = false): DataTypeEncoder[A] =
+  def pure[A](dt: DataType, f: Option[Seq[StructField]] = None, isNullable: Boolean = false): DataTypeEncoder[A] =
     new DataTypeEncoder[A] {
       def encode: DataType = dt
+      def fields: Option[Seq[StructField]] = f
       def nullable: Boolean = isNullable
     }
 }
@@ -56,6 +59,7 @@ object DataTypeEncoder {
   """)
 sealed trait StructTypeEncoder[A] extends DataTypeEncoder[A] {
   def encode: StructType
+  def fields: Option[Seq[StructField]]
   def nullable: Boolean
 }
 
@@ -65,6 +69,7 @@ object StructTypeEncoder extends MediumPriorityImplicits {
   def pure[A](st: StructType, isNullable: Boolean = false): StructTypeEncoder[A] =
     new StructTypeEncoder[A] {
       def encode: StructType = st
+      def fields: Option[Seq[StructField]] = Some(st.fields.toSeq)
       def nullable: Boolean = isNullable
     }
 }
@@ -80,7 +85,7 @@ sealed trait AnnotatedStructTypeEncoder[A] {
 }
 
 object AnnotatedStructTypeEncoder extends MediumPriorityImplicits {
-  type Encode = Seq[Metadata] => StructType
+  type Encode = (Seq[Metadata], Seq[Option[Flatten]]) => StructType
 
   def pure[A](enc: Encode): AnnotatedStructTypeEncoder[A] =
     new AnnotatedStructTypeEncoder[A] {
@@ -89,29 +94,46 @@ object AnnotatedStructTypeEncoder extends MediumPriorityImplicits {
 }
 
 trait LowPriorityImplicits {
-  implicit val hnilEncoder: AnnotatedStructTypeEncoder[HNil] = AnnotatedStructTypeEncoder.pure(_ => StructType(Nil))
+  implicit val hnilEncoder: AnnotatedStructTypeEncoder[HNil] =
+    AnnotatedStructTypeEncoder.pure((_, _) => StructType(Nil))
   implicit def hconsEncoder[K <: Symbol, H, T <: HList](
     implicit
     witness: Witness.Aux[K],
     hEncoder: Lazy[DataTypeEncoder[H]],
     tEncoder: AnnotatedStructTypeEncoder[T]
-  ): AnnotatedStructTypeEncoder[FieldType[K, H] :: T] = AnnotatedStructTypeEncoder.pure { metadata => 
+  ): AnnotatedStructTypeEncoder[FieldType[K, H] :: T] = AnnotatedStructTypeEncoder.pure { (metadata, flatten) =>
     val fieldName = witness.value.name
-    val head = hEncoder.value.encode
-    val nullable = hEncoder.value.nullable
-    val tail = tEncoder.encode(metadata.tail)
-    StructType(StructField(fieldName, head, nullable, metadata.head) +: tail.fields)
+    val dt = hEncoder.value.encode
+    val fields = flatten.head.flatMap(f => hEncoder.value.fields.map(flattenFields(_, dt, fieldName, f))).getOrElse(
+      Seq(StructField(fieldName, dt, hEncoder.value.nullable, metadata.head)))
+    val tail = tEncoder.encode(metadata.tail, flatten.tail)
+    StructType(fields ++ tail.fields)
   }
 
-  implicit def recordEncoder[A, H <: HList, HA <: HList](
+  private def flattenFields(fields: Seq[StructField], dt: DataType, prefix: String, flatten: Flatten): Seq[StructField] =
+    (dt, flatten) match {
+      case (_: ArrayType, Flatten(times, _)) if times > 1 =>
+        (0 until times).flatMap(i => fields.map(prefixStructField(_, s"$prefix.$i")))
+      case (_: MapType, Flatten(_, keys)) if keys.nonEmpty =>
+        keys.flatMap(k => fields.map(prefixStructField(_, s"$prefix.$k")))
+      case (_, Flatten(_, _)) => fields.map(prefixStructField(_, prefix))
+    }
+
+  private def prefixStructField(f: StructField, prefix: String) =
+    f.copy(name = s"$prefix.${f.name}")
+
+  implicit def recordEncoder[A, H <: HList, HA <: HList, HF <: HList](
     implicit
     generic: LabelledGeneric.Aux[A, H],
-    annotations: Annotations.Aux[Meta, A, HA],
+    metaAnnotations: Annotations.Aux[Meta, A, HA],
+    flattenAnnotations: Annotations.Aux[Flatten, A, HF],
     hEncoder: Lazy[AnnotatedStructTypeEncoder[H]],
-    toList: ToList[HA, Option[Meta]]
+    metaToList: ToList[HA, Option[Meta]],
+    flattenToList: ToList[HF, Option[Flatten]]
   ): StructTypeEncoder[A] = {
-    val metadata = annotations().toList[Option[Meta]].map(extractMetadata)
-    StructTypeEncoder.pure(hEncoder.value.encode(metadata))
+    val metadata = metaAnnotations().toList[Option[Meta]].map(extractMetadata)
+    val flatten = flattenAnnotations().toList[Option[Flatten]]
+    StructTypeEncoder.pure(hEncoder.value.encode(metadata, flatten))
   }
 
   private val extractMetadata: Option[Meta] => Metadata =
@@ -153,16 +175,16 @@ trait MediumPriorityImplicits extends LowPriorityImplicits {
     enc: DataTypeEncoder[A0],
     is: IsTraversableOnce[C[A0]] { type A = A0 }
   ): DataTypeEncoder[C[A0]] =
-    DataTypeEncoder.pure(ArrayType(enc.encode))
+    DataTypeEncoder.pure(ArrayType(enc.encode), enc.fields)
   implicit def mapEncoder[K, V](
     implicit
     kEnc: DataTypeEncoder[K],
     vEnc: DataTypeEncoder[V]
   ): DataTypeEncoder[Map[K, V]] =
-    DataTypeEncoder.pure(MapType(kEnc.encode, vEnc.encode))
+    DataTypeEncoder.pure(MapType(kEnc.encode, vEnc.encode), vEnc.fields)
   implicit def optionEncoder[V](
     implicit
     enc: DataTypeEncoder[V]
   ): DataTypeEncoder[Option[V]] =
-    DataTypeEncoder.pure(enc.encode, true)
+    DataTypeEncoder.pure(enc.encode, isNullable = true)
 }

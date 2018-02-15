@@ -18,7 +18,7 @@ lazy val compilerOptions = Seq(
 )
 
 lazy val shapelessVersion = "2.3.2"
-lazy val sparkVersion = "2.1.0"
+lazy val sparkVersion = "2.1.2"
 lazy val scalatestVersion = "3.0.1"
 
 lazy val baseSettings = Seq(
@@ -28,6 +28,7 @@ lazy val baseSettings = Seq(
   ) ++ Seq(
     "org.scalatest" %% "scalatest" % scalatestVersion
   ).map(_ % "test"),
+  parallelExecution in Test := false,
   scalacOptions ++= compilerOptions
 )
 
