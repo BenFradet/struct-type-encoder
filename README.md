@@ -67,25 +67,27 @@ val derived = spark
 
 No inference, no boilerplate!
 
-### Spark Metadata support
+## Additional features
 
-It is possible to add `Metada` to `StructField`s with `Meta` annotation:
+### Spark `Metadata` support
+
+It is possible to add `Metada` information to `StructField`s with the `Meta` annotation:
 
 ```scala
 import org.apache.spark.sql.types._
-import ste.._
+import ste._
 
 val metadata = new MetadataBuilder()
   .putLong("foo", 10)
   .putString("bar", "baz")
-  .build
+  .build()
 
 case class Foo(a: String, @Meta(metadata) b: Int)
 ```
 
-### Flattening schema
+### Flattening schemas
 
-Using `ste.Flatten` annotation we can eliminate repetitions from case class definitions.
+Using the `ste.Flatten` annotation we can eliminate repetitions from case class definitions.
 Take the following example:
 
 ```scala
@@ -124,7 +126,7 @@ val df = spark
   .csv("/some/dir/*.csv")
 ```
 
-struct-type-encoder can derive the nested projection of a `Dataframe`
+`struct-type-encoder` can derive the nested projection of a `Dataframe`
 and convert it to a `Dataset` by providing the class:
 
 ```scala
