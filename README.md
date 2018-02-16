@@ -12,7 +12,7 @@ Deriving Spark DataFrame schemas from case classes.
 struct-type-encoder is available on maven central with the following coordinates:
 
 ```scala
-"com.github.benfradet" %% "struct-type-encoder" % "0.1.0"
+"com.github.benfradet" %% "struct-type-encoder" % "0.2.0"
 ```
 
 ## Motivation
