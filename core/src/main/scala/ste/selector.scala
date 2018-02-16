@@ -209,9 +209,7 @@ trait SelectorImplicits {
   ): DataTypeSelector[Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
     s.select(df, prefixes)
   }
-}
 
-object DFUtils {
   implicit class FlattenedDataFrame(df: DataFrame) {
     def asNested[A : Encoder : StructTypeSelector]: Dataset[A] = selectNested.as[A]
 
