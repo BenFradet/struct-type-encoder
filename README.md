@@ -67,6 +67,73 @@ val derived = spark
 
 No inference, no boilerplate!
 
+### Spark Metadata support
+
+It is possible to add `Metada` to `StructField`s with `Meta` annotation:
+
+```scala
+import org.apache.spark.sql.types._
+import ste.._
+
+val metadata = new MetadataBuilder()
+  .putLong("foo", 10)
+  .putString("bar", "baz")
+  .build
+
+case class Foo(a: String, @Meta(metadata) b: Int)
+```
+
+### Flattening schema
+
+Using `ste.Flatten` annotation we can eliminate repetitions from case class definitions.
+Take the following example:
+
+```scala
+import ste._
+case class Foo(a: String, b: Int)
+case class Bar(@Flatten(2) a: Seq[Foo], @Flatten(1, Seq("x", "y")) b: Map[String, Foo], @Flatten c: Foo)
+
+StructTypeEncoder[Bar].encode
+```
+
+The derived schema is the following:
+
+```scala
+StructType(
+  StructField("a.0.a", StringType, false) ::
+  StructField("a.0.b", IntegerType, false) ::
+  StructField("a.1.a", StringType, false) ::
+  StructField("a.1.b", IntegerType, false) ::
+  StructField("b.x.a", StringType, false) ::
+  StructField("b.x.b", IntegerType, false) ::
+  StructField("b.y.a", StringType, false) ::
+  StructField("b.y.b", IntegerType, false) ::
+  StructField("c.a", StringType, false) ::
+  StructField("c.b", IntegerType, false) :: Nil
+)
+```
+
+Now we want to read our data source with a flat schema:
+
+```scala
+import ste.StructTypeEncoder
+import ste.StructTypeEncoder._
+val df = spark
+  .read
+  .schema(StructTypeEncoder[Bar].encode)
+  .csv("/some/dir/*.csv")
+```
+
+struct-type-encoder can derive the nested projection of a `Dataframe`
+and convert it to a `Dataset` by providing the class:
+
+```scala
+import StructTypeSelector._
+import DFUtils._
+
+val ds: Dataset[Bar] = df.asNested[Bar]
+```
+
 ## Benchmarks
 
 This project includes [JMH](http://openjdk.java.net/projects/code-tools/jmh/) benchmarks to prove
