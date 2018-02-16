@@ -27,7 +27,6 @@ import org.scalatest.{ FlatSpec, Matchers }
 import ste._
 import StructTypeEncoder._
 import StructTypeSelector._
-import DFUtils._
 
 object StructSelectorSpec {
   case class Foo(a: Int, b: String)
