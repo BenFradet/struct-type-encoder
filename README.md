@@ -131,7 +131,6 @@ and convert it to a `Dataset` by providing the class:
 
 ```scala
 import StructTypeSelector._
-import DFUtils._
 
 val ds: Dataset[Bar] = df.asNested[Bar]
 ```
