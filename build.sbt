@@ -17,7 +17,7 @@ lazy val compilerOptions = Seq(
   "-Xlint"
 )
 
-lazy val shapelessVersion = "2.3.2"
+lazy val shapelessVersion = "2.3.3"
 lazy val sparkVersion = "2.3.1"
 lazy val scalatestVersion = "3.0.5"
 
