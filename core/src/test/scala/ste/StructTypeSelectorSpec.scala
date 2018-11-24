@@ -21,10 +21,8 @@
 
 package ste
 
-import org.apache.spark.sql.types._
 import org.apache.spark.sql.SparkSession
 import org.scalatest.{ FlatSpec, Matchers }
-import ste._
 import StructTypeEncoder._
 import StructTypeSelector._
 
