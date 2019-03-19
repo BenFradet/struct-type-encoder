@@ -20,7 +20,7 @@ lazy val compilerOptions = Seq(
 
 lazy val shapelessVersion = "2.3.3"
 lazy val sparkVersion = "2.4.0"
-lazy val scalatestVersion = "3.0.6"
+lazy val scalatestVersion = "3.0.7"
 
 lazy val baseSettings = Seq(
   libraryDependencies ++= Seq(
