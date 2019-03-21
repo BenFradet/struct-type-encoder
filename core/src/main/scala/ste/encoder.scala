@@ -30,7 +30,7 @@ import scala.annotation.StaticAnnotation
 import scala.collection.generic.IsTraversableOnce
 
 final case class Meta(metadata: Metadata) extends StaticAnnotation
-final case class Flatten(times: Int = 1, keys: Seq[String] = Seq()) extends StaticAnnotation
+final case class Flatten(times: Int = 1, keys: Seq[String] = Seq(), omitPrefix: Boolean = false) extends StaticAnnotation
 
 @annotation.implicitNotFound("""
   Type ${A} does not have a DataTypeEncoder defined in the library.
@@ -112,11 +112,11 @@ trait LowPriorityImplicits {
 
   private def flattenFields(fields: Seq[StructField], dt: DataType, prefix: String, flatten: Flatten): Seq[StructField] =
     (dt, flatten) match {
-      case (_: ArrayType, Flatten(times, _)) if times > 1 =>
+      case (_: ArrayType, Flatten(times, _, _)) if times > 1 =>
         (0 until times).flatMap(i => fields.map(prefixStructField(_, s"$prefix.$i")))
-      case (_: MapType, Flatten(_, keys)) if keys.nonEmpty =>
+      case (_: MapType, Flatten(_, keys, _)) if keys.nonEmpty =>
         keys.flatMap(k => fields.map(prefixStructField(_, s"$prefix.$k")))
-      case (_, Flatten(_, _)) => fields.map(prefixStructField(_, prefix))
+      case (_, Flatten(_, _, omitPrefix)) => fields.map(f => if (omitPrefix) f else prefixStructField(f, prefix))
     }
 
   private def prefixStructField(f: StructField, prefix: String) =

@@ -139,9 +139,9 @@ trait SelectorImplicits {
 
   private def getChildPrefixes(prefixes: List[Prefix], flatten: Option[Flatten]): List[Prefix] =
     flatten.map {
-      case Flatten(times, _) if times > 1 => (0 until times).flatMap(i => prefixes.map(_.addSuffix(i))).toList
-      case Flatten(_, keys) if keys.nonEmpty => keys.flatMap(k => prefixes.map(_.addSuffix(k))).toList
-      case Flatten(_, _) => prefixes
+      case Flatten(times, _, _) if times > 1 => (0 until times).flatMap(i => prefixes.map(_.addSuffix(i))).toList
+      case Flatten(_, keys,_ ) if keys.nonEmpty => keys.flatMap(k => prefixes.map(_.addSuffix(k))).toList
+      case Flatten(_, _,_ ) => prefixes
     }.getOrElse(prefixes)
 
   private def getNestedColumns(prefixes: List[Prefix], df: DataFrame, flatten: Flatten): Map[Prefix, Column] =
@@ -149,9 +149,9 @@ trait SelectorImplicits {
       val colName = prefix.toString
       val cols = groupedPrefixes.map(p => df(p.quotedString))
       flatten match {
-        case Flatten(times, _) if times > 1 => (prefix, array(cols :_*).as(colName))
-        case Flatten(_, keys) if keys.nonEmpty => (prefix, map(interleave(keys.map(lit), cols) :_*).as(colName))
-        case Flatten(_, _) => (groupedPrefixes.head, cols.head)
+        case Flatten(times, _, _) if times > 1 => (prefix, array(cols :_*).as(colName))
+        case Flatten(_, keys,_ ) if keys.nonEmpty => (prefix, map(interleave(keys.map(lit), cols) :_*).as(colName))
+        case Flatten(_, _,_ ) => (groupedPrefixes.head, cols.head)
       }
     }(breakOut)
 
