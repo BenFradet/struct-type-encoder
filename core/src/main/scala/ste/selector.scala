@@ -33,7 +33,7 @@ import shapeless.labelled.FieldType
   Type ${A} does not have a DataTypeSelector defined in the library.
   You need to define one yourself.
   """)
-sealed trait DataTypeSelector[A]  {
+sealed trait DataTypeSelector[A] {
   import DataTypeSelector.Select
 
   val select: Select
@@ -85,7 +85,7 @@ sealed trait MultiStructTypeSelector[A] {
 
 object MultiStructTypeSelector {
   import StructTypeSelector.Prefix
-  type Select = (Prefix, Option[Flatten], Seq[Option[Flatten]]) => Seq[Column]
+  type Select = (Prefix, Option[Flatten], List[Option[Flatten]]) => List[Column]
 
   def pure[A](s: Select): MultiStructTypeSelector[A] =
     new MultiStructTypeSelector[A] {
@@ -96,13 +96,13 @@ object MultiStructTypeSelector {
 trait SelectorImplicits {
   type Prefix = Vector[String]
 
-  def addPrefix(prefix: Prefix, s: String, flatten: Option[Flatten]): Prefix = flatten match {
+  private def addPrefix(prefix: Prefix, s: String, flatten: Option[Flatten]): Prefix = flatten match {
     case Some(_) => prefix.dropRight(1) :+ prefix.lastOption.map(p => s"$p.$s").getOrElse(s)
     case _ => prefix :+ s
   }
 
   implicit val hnilSelector: MultiStructTypeSelector[HNil] =
-    MultiStructTypeSelector.pure((_, _, _) => Seq.empty)
+    MultiStructTypeSelector.pure((_, _, _) => List.empty)
 
   implicit def hconsSelector[K <: Symbol, H, T <: HList](
     implicit
@@ -157,13 +157,13 @@ trait SelectorImplicits {
     implicit s: DataTypeSelector[V]
   ): DataTypeSelector[Map[K, V]] = DataTypeSelector.pure { (prefix, flatten) =>
     flatten
-      .map(_.keys.flatMap(k => Seq(lit(k), s.select(addPrefix(prefix, k, flatten), flatten))))
+      .map(_.keys.flatMap(k => List(lit(k), s.select(addPrefix(prefix, k, flatten), flatten))))
       .map(map(_: _*))
       .getOrElse(s.select(prefix, flatten))
   }
 
   implicit class FlattenedDataFrame(df: DataFrame) {
-    def asNested[A <: Product : Encoder : StructTypeSelector]: Dataset[A] = selectNested.as[A]
+    def asNested[A : Encoder : StructTypeSelector]: Dataset[A] = selectNested.as[A]
 
     def selectNested[A](implicit s: StructTypeSelector[A]): DataFrame =
       df.select(s.select(Vector.empty, None).as("nested")).select("nested.*")
