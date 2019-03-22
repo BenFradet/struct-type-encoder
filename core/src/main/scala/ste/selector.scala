@@ -23,48 +23,33 @@ package ste
 
 import org.apache.spark.sql.{ Column, DataFrame, Dataset, Encoder }
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types._
-import scala.annotation.tailrec
 import scala.collection.generic.IsTraversableOnce
-import scala.collection.breakOut
 import shapeless._
 import shapeless.ops.hlist._
 import shapeless.syntax.std.tuple._
 import shapeless.labelled.FieldType
 
-case class Prefix(p: String) {
-  def addSuffix(s: Any) = Prefix(s"$p.$s")
-  def getParent = Prefix(p.split("\\.").dropRight(1).mkString("."))
-  def getSuffix = p.split("\\.").last
-  def isParentOf(other: Prefix) = other.toString.startsWith(s"$p.")
-  def isChildrenOf(other: Prefix) = other.isParentOf(this)
-  def quotedString = s"`$p`"
-  override def toString = p
-}
-
 @annotation.implicitNotFound("""
   Type ${A} does not have a DataTypeSelector defined in the library.
   You need to define one yourself.
   """)
-sealed trait DataTypeSelector[A] {
+sealed trait DataTypeSelector[A]  {
   import DataTypeSelector.Select
 
   val select: Select
 }
 
-object DataTypeSelector {
-  type Prefixes = List[Prefix]
-  type Select = (DataFrame, Option[Prefixes]) => DataFrame
+object DataTypeSelector extends SelectorImplicits {
+  type Select = (Prefix, Option[Flatten]) => Column
+
+  def apply[A](implicit s: DataTypeSelector[A]): DataTypeSelector[A] = s
 
   def pure[A](s: Select): DataTypeSelector[A] =
     new DataTypeSelector[A] {
       val select: Select = s
     }
 
-  def identityDF[A]: DataTypeSelector[A] =
-    new DataTypeSelector[A] {
-      val select: Select = (df, _) => df
-    }
+  def simpleColumn[A]: DataTypeSelector[A] = pure[A]((prefix, _) => col(prefix.map(s => s"`$s`").mkString(".")))
 }
 
 @annotation.implicitNotFound("""
@@ -89,130 +74,98 @@ object StructTypeSelector extends SelectorImplicits {
 }
 
 @annotation.implicitNotFound("""
-  Type ${A} does not have a AnnotatedStructTypeSelector defined in the library.
+  Type ${A} does not have a MultiStructTypeSelector defined in the library.
   You need to define one yourself.
   """)
-sealed trait AnnotatedStructTypeSelector[A] {
-  import AnnotatedStructTypeSelector.Select
+sealed trait MultiStructTypeSelector[A] {
+  import MultiStructTypeSelector.Select
 
   val select: Select
 }
 
-object AnnotatedStructTypeSelector extends SelectorImplicits {
-  import DataTypeSelector.Prefixes
+object MultiStructTypeSelector {
+  import StructTypeSelector.Prefix
+  type Select = (Prefix, Option[Flatten], Seq[Option[Flatten]]) => Seq[Column]
 
-  type Select = (DataFrame, Option[Prefixes], Seq[Option[Flatten]]) => DataFrame
-
-  def pure[A](s: Select): AnnotatedStructTypeSelector[A] =
-    new AnnotatedStructTypeSelector[A] {
-      val select = s
+  def pure[A](s: Select): MultiStructTypeSelector[A] =
+    new MultiStructTypeSelector[A] {
+      val select: Select = s
     }
 }
 
 trait SelectorImplicits {
-  implicit val hnilSelector: AnnotatedStructTypeSelector[HNil] =
-    AnnotatedStructTypeSelector.pure((df, _, _) => df)
+  type Prefix = Vector[String]
+
+  def addPrefix(prefix: Prefix, s: String, flatten: Option[Flatten]): Prefix = flatten match {
+    case Some(_) => prefix.dropRight(1) :+ prefix.lastOption.map(p => s"$p.$s").getOrElse(s)
+    case _ => prefix :+ s
+  }
+
+  implicit val hnilSelector: MultiStructTypeSelector[HNil] =
+    MultiStructTypeSelector.pure((_, _, _) => Seq.empty)
 
   implicit def hconsSelector[K <: Symbol, H, T <: HList](
     implicit
     witness: Witness.Aux[K],
     hSelector: Lazy[DataTypeSelector[H]],
-    tSelector: AnnotatedStructTypeSelector[T]
-  ): AnnotatedStructTypeSelector[FieldType[K, H] :: T] = AnnotatedStructTypeSelector.pure { (df, parentPrefixes, flatten) =>
+    tSelector: MultiStructTypeSelector[T]
+  ): MultiStructTypeSelector[FieldType[K, H] :: T] = MultiStructTypeSelector.pure { (prefix, parentFlatten, flatten) =>
     val fieldName = witness.value.name
-    val prefixes = parentPrefixes.map(_.map(_.addSuffix(fieldName))).getOrElse(List(Prefix(fieldName)))
-    val childPrefixes = getChildPrefixes(prefixes, flatten.head)
-    val dfHead = hSelector.value.select(df, Some(childPrefixes))
-    val dfNested = flatten.head.map { fl =>
-      val fields = dfHead.schema.fields.map(f => Prefix(f.name)).toList
-      val restCols = fields.filter(f => !childPrefixes.exists(_.isParentOf(f))).map(f => dfHead(f.quotedString))
-      val structs = childPrefixes.map { p =>
-        val cols = fields.filter(_.isChildrenOf(p)).map(f => dfHead(f.quotedString).as(f.getSuffix))
-        struct(cols :_*).as(p.toString)
-      }
-      val dfStruct = dfHead.select((structs ++ restCols) :_*)
-      val nestedCols = getNestedColumns(childPrefixes, dfStruct, fl)
-      orderedSelect(dfStruct, nestedCols, fields)
-    }.getOrElse(dfHead)
-    tSelector.select(dfNested, parentPrefixes, flatten.tail)
+    val hColumn = hSelector.value.select(addPrefix(prefix, fieldName, parentFlatten), flatten.head).as(fieldName)
+    val tColumns = tSelector.select(prefix, parentFlatten, flatten.tail)
+    hColumn +: tColumns
   }
 
-  private def getChildPrefixes(prefixes: List[Prefix], flatten: Option[Flatten]): List[Prefix] =
-    flatten.map {
-      case Flatten(times, _) if times > 1 => (0 until times).flatMap(i => prefixes.map(_.addSuffix(i))).toList
-      case Flatten(_, keys) if keys.nonEmpty => keys.flatMap(k => prefixes.map(_.addSuffix(k))).toList
-      case Flatten(_, _) => prefixes
-    }.getOrElse(prefixes)
-
-  private def getNestedColumns(prefixes: List[Prefix], df: DataFrame, flatten: Flatten): Map[Prefix, Column] =
-    prefixes.groupBy(_.getParent).map { case (prefix, groupedPrefixes) =>
-      val colName = prefix.toString
-      val cols = groupedPrefixes.map(p => df(p.quotedString))
-      flatten match {
-        case Flatten(times, _) if times > 1 => (prefix, array(cols :_*).as(colName))
-        case Flatten(_, keys) if keys.nonEmpty => (prefix, map(interleave(keys.map(lit), cols) :_*).as(colName))
-        case Flatten(_, _) => (groupedPrefixes.head, cols.head)
-      }
-    }(breakOut)
-
-  private def orderedSelect(df: DataFrame, nestedCols: Map[Prefix, Column], fields: List[Prefix]): DataFrame = {
-    @tailrec
-    def loop(nestedCols: Map[Prefix, Column], fields: List[Prefix], cols: List[Column]): List[Column] = fields match {
-      case Nil => cols.reverse
-      case hd +: tail => nestedCols.find { case (p, _) => p.isParentOf(hd) } match {
-        case Some((p, c)) => loop(nestedCols - p, fields.dropWhile(_.isChildrenOf(p)), c +: cols)
-        case None => loop(nestedCols, tail, df(hd.quotedString) +: cols)
-      }
-    }
-    val cols = loop(nestedCols, fields, List[Column]())
-    df.select(cols :_*)
-  }
-
-  private def interleave[T](a: Seq[T], b: Seq[T]): Seq[T] = a.zip(b).flatMap(_.toList)
-
-  implicit def dfSelector[A, H <: HList, HF <: HList](
+  implicit def productSelector[A, H <: HList, HF <: HList](
     implicit
     generic: LabelledGeneric.Aux[A, H],
     flattenAnnotations: Annotations.Aux[Flatten, A, HF],
-    hSelector: Lazy[AnnotatedStructTypeSelector[H]],
+    hSelector: Lazy[MultiStructTypeSelector[H]],
     flattenToList: ToList[HF, Option[Flatten]]
-  ): StructTypeSelector[A] = StructTypeSelector.pure { (df, prefixes) =>
-    val flatten = flattenAnnotations().toList[Option[Flatten]]
-    hSelector.value.select(df, prefixes, flatten)
+  ): StructTypeSelector[A] = StructTypeSelector.pure { (prefix, flatten) =>
+    val flattens = flattenAnnotations().toList[Option[Flatten]]
+    struct(hSelector.value.select(prefix, flatten, flattens): _*)
   }
 
-  implicit val binarySelector: DataTypeSelector[Array[Byte]] = DataTypeSelector.identityDF
-  implicit val booleanSelector: DataTypeSelector[Boolean] = DataTypeSelector.identityDF
-  implicit val byteSelector: DataTypeSelector[Byte] = DataTypeSelector.identityDF
-  implicit val dateSelector: DataTypeSelector[java.sql.Date] = DataTypeSelector.identityDF
-  implicit val decimalSelector: DataTypeSelector[BigDecimal] = DataTypeSelector.identityDF
-  implicit val doubleSelector: DataTypeSelector[Double] = DataTypeSelector.identityDF
-  implicit val floatSelector: DataTypeSelector[Float] = DataTypeSelector.identityDF
-  implicit val intSelector: DataTypeSelector[Int] = DataTypeSelector.identityDF
-  implicit val longSelector: DataTypeSelector[Long] = DataTypeSelector.identityDF
-  implicit val nullSelector: DataTypeSelector[Unit] = DataTypeSelector.identityDF
-  implicit val shortSelector: DataTypeSelector[Short] = DataTypeSelector.identityDF
-  implicit val stringSelector: DataTypeSelector[String] = DataTypeSelector.identityDF
-  implicit val timestampSelector: DataTypeSelector[java.sql.Timestamp] = DataTypeSelector.identityDF
-  implicit def optionSelector[T]: DataTypeSelector[Option[T]] = DataTypeSelector.identityDF
+  implicit val binarySelector: DataTypeSelector[Array[Byte]] = DataTypeSelector.simpleColumn
+  implicit val booleanSelector: DataTypeSelector[Boolean] = DataTypeSelector.simpleColumn
+  implicit val byteSelector: DataTypeSelector[Byte] = DataTypeSelector.simpleColumn
+  implicit val dateSelector: DataTypeSelector[java.sql.Date] = DataTypeSelector.simpleColumn
+  implicit val decimalSelector: DataTypeSelector[BigDecimal] = DataTypeSelector.simpleColumn
+  implicit val doubleSelector: DataTypeSelector[Double] = DataTypeSelector.simpleColumn
+  implicit val floatSelector: DataTypeSelector[Float] = DataTypeSelector.simpleColumn
+  implicit val intSelector: DataTypeSelector[Int] = DataTypeSelector.simpleColumn
+  implicit val longSelector: DataTypeSelector[Long] = DataTypeSelector.simpleColumn
+  implicit val nullSelector: DataTypeSelector[Unit] = DataTypeSelector.simpleColumn
+  implicit val shortSelector: DataTypeSelector[Short] = DataTypeSelector.simpleColumn
+  implicit val stringSelector: DataTypeSelector[String] = DataTypeSelector.simpleColumn
+  implicit val timestampSelector: DataTypeSelector[java.sql.Timestamp] = DataTypeSelector.simpleColumn
+  implicit def optionSelector[T]: DataTypeSelector[Option[T]] = DataTypeSelector.simpleColumn
 
   implicit def traversableOnceSelector[A0, C[_]](
     implicit
     s: DataTypeSelector[A0],
     is: IsTraversableOnce[C[A0]] { type A = A0 }
-  ): DataTypeSelector[C[A0]] = DataTypeSelector.pure { (df, prefixes) =>
-    s.select(df, prefixes)
+  ): DataTypeSelector[C[A0]] = DataTypeSelector.pure { (prefix, flatten) =>
+    flatten
+      .map(f => (0 until f.times).map(i => s.select(addPrefix(prefix, i.toString, flatten), flatten)))
+      .map(array(_: _*))
+      .getOrElse(s.select(prefix, flatten))
   }
 
   implicit def mapSelector[K, V](
     implicit s: DataTypeSelector[V]
-  ): DataTypeSelector[Map[K, V]] = DataTypeSelector.pure { (df, prefixes) =>
-    s.select(df, prefixes)
+  ): DataTypeSelector[Map[K, V]] = DataTypeSelector.pure { (prefix, flatten) =>
+    flatten
+      .map(_.keys.flatMap(k => Seq(lit(k), s.select(addPrefix(prefix, k, flatten), flatten))))
+      .map(map(_: _*))
+      .getOrElse(s.select(prefix, flatten))
   }
 
   implicit class FlattenedDataFrame(df: DataFrame) {
-    def asNested[A : Encoder : StructTypeSelector]: Dataset[A] = selectNested.as[A]
+    def asNested[A <: Product : Encoder : StructTypeSelector]: Dataset[A] = selectNested.as[A]
 
-    def selectNested[A](implicit s: StructTypeSelector[A]): DataFrame = s.select(df, None)
+    def selectNested[A](implicit s: StructTypeSelector[A]): DataFrame =
+      df.select(s.select(Vector.empty, None).as("nested")).select("nested.*")
   }
 }
