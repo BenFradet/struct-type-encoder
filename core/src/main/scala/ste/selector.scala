@@ -111,7 +111,7 @@ trait SelectorImplicits {
     tSelector: MultiStructTypeSelector[T]
   ): MultiStructTypeSelector[FieldType[K, H] :: T] = MultiStructTypeSelector.pure { (prefix, parentFlatten, flatten) =>
     val fieldName = witness.value.name
-    val hColumn = hSelector.value.select(addPrefix(prefix, fieldName, parentFlatten), flatten.head).as(fieldName)
+    val hColumn = hSelector.value.select(addPrefix(prefix, fieldName, parentFlatten), flatten.headOption.flatten).as(fieldName)
     val tColumns = tSelector.select(prefix, parentFlatten, flatten.tail)
     hColumn +: tColumns
   }
