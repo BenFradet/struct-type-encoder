@@ -86,4 +86,20 @@ class StructSelectorSpec extends FlatSpec with Matchers {
     )
     result shouldEqual expected
   }
+
+  it should "deal with not flattened struct" in {
+    import spark.implicits._
+    val df = spark.createDataset(List((Foo(1, "a"), 2), (Foo(3, "b"), 4))).toDF
+    val result = df.asNested[(Foo, Int)].collect
+    val expected = Array((Foo(1, "a"), 2), (Foo(3, "b"), 4))
+    result shouldEqual expected
+  }
+
+  it should "deal with not flattened array" in {
+    import spark.implicits._
+    val df = spark.createDataset(List((1 -> Seq(1, 2)), (3 -> Seq(4, 5)))).toDF
+    val result = df.asNested[(Int, Seq[Int])].collect
+    val expected = Array((1 -> Seq(1, 2)), (3 -> Seq(4, 5)))
+    result shouldEqual expected
+  }
 }
