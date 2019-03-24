@@ -22,6 +22,7 @@
 package ste
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
 import org.scalatest.{ FlatSpec, Matchers }
 import StructTypeEncoder._
 import StructTypeSelector._
@@ -31,6 +32,9 @@ object StructSelectorSpec {
   case class Bar(@Flatten(1, Seq("asd", "qwe")) foo: Map[String, Foo], c: Int)
   case class Baz(@Flatten(2) bar: Seq[Bar], e: Int)
   case class Asd(@Flatten foo: Foo, x: Int)
+  case class Qwe(asd: Asd, y: Int)
+  case class Zxc(foo: Foo, x: Int)
+  case class Edx(@Flatten zxc: Zxc, y: Int)
 }
 
 class StructSelectorSpec extends FlatSpec with Matchers {
@@ -92,6 +96,37 @@ class StructSelectorSpec extends FlatSpec with Matchers {
     val df = spark.createDataset(List((Foo(1, "a"), 2), (Foo(3, "b"), 4))).toDF
     val result = df.asNested[(Foo, Int)].collect
     val expected = Array((Foo(1, "a"), 2), (Foo(3, "b"), 4))
+    result shouldEqual expected
+  }
+
+  it should "deal with flattened in non-flattened struct" in {
+    import spark.implicits._
+    val values = List(
+      (1, "asd", 2, 3),
+      (4, "qwe", 5, 6)
+    )
+    val df = spark.createDataset(values).select(
+      struct($"_1".as("foo.a"), $"_2".as("foo.b"), $"_3".as("x")).as("asd"),
+      $"_4".as("y")
+    )
+    val result = df.asNested[Qwe].collect
+    val expected = Array(Qwe(Asd(Foo(1, "asd"), 2), 3), Qwe(Asd(Foo(4, "qwe"), 5), 6))
+    result shouldEqual expected
+  }
+
+  it should "deal with non-flattened in flattened struct" in {
+    import spark.implicits._
+    val values = List(
+      (1, "asd", 2, 3),
+      (4, "qwe", 5, 6)
+    )
+    val df = spark.createDataset(values).select(
+      struct($"_1".as("a"), $"_2".as("b")).as("zxc.foo"),
+      $"_3".as("zxc.x"),
+      $"_4".as("y")
+    )
+    val result = df.asNested[Edx].collect
+    val expected = Array(Edx(Zxc(Foo(1, "asd"), 2), 3), Edx(Zxc(Foo(4, "qwe"), 5), 6))
     result shouldEqual expected
   }
 
