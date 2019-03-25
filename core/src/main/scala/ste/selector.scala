@@ -49,7 +49,8 @@ object DataTypeSelector extends SelectorImplicits {
       val select: Select = s
     }
 
-  def simpleColumn[A]: DataTypeSelector[A] = pure[A]((prefix, _) => col(prefix.map(s => s"`$s`").mkString(".")))
+  def simpleColumn[A]: DataTypeSelector[A] =
+    pure[A]((prefix, _) => col(prefix.map(s => s"`${s.mkString(".")}`").mkString(".")))
 }
 
 @annotation.implicitNotFound("""
@@ -94,11 +95,12 @@ object MultiStructTypeSelector {
 }
 
 trait SelectorImplicits {
-  type Prefix = Vector[String]
+  type Prefix = Vector[Vector[String]]
 
   private def addPrefix(prefix: Prefix, s: String, flatten: Option[Flatten]): Prefix = flatten match {
-    case Some(_) => prefix.dropRight(1) :+ prefix.lastOption.map(p => s"$p.$s").getOrElse(s)
-    case _ => prefix :+ s
+    case Some(Flatten(_, _, true)) => prefix.dropRight(1) :+ prefix.lastOption.map(_.dropRight(1) :+ s).getOrElse(Vector(s))
+    case Some(_) => prefix.dropRight(1) :+ prefix.lastOption.map(_ :+ s).getOrElse(Vector(s))
+    case _ => prefix :+ Vector(s)
   }
 
   implicit val hnilSelector: MultiStructTypeSelector[HNil] =

@@ -114,19 +114,26 @@ class StructTypeEncoderSpec extends FlatSpec with Matchers {
       .putString("bar", "baz")
       .build
 
-    case class Foo(a: String, @Meta(metadata) b: Int)
-    case class Bar(@Flatten(2) a: Seq[Foo], @Flatten(1, Seq("x", "y")) b: Map[String, Foo], @Flatten c: Foo)
+    case class Foo(fa: String, @Meta(metadata) fb: Int)
+    case class Bar(
+      @Flatten(2) a: Seq[Foo],
+      @Flatten(1, Seq("x", "y")) b: Map[String, Foo],
+      @Flatten c: Foo,
+      @Flatten(1, Seq(), omitPrefix = true) d: Foo
+    )
     StructTypeEncoder[Bar].encode shouldBe StructType(
-      StructField("a.0.a", StringType, false) ::
-      StructField("a.0.b", IntegerType, false, metadata) ::
-      StructField("a.1.a", StringType, false) ::
-      StructField("a.1.b", IntegerType, false, metadata) ::
-      StructField("b.x.a", StringType, false) ::
-      StructField("b.x.b", IntegerType, false, metadata) ::
-      StructField("b.y.a", StringType, false) ::
-      StructField("b.y.b", IntegerType, false, metadata) ::
-      StructField("c.a", StringType, false) ::
-      StructField("c.b", IntegerType, false, metadata) :: Nil
+      StructField("a.0.fa", StringType, false) ::
+      StructField("a.0.fb", IntegerType, false, metadata) ::
+      StructField("a.1.fa", StringType, false) ::
+      StructField("a.1.fb", IntegerType, false, metadata) ::
+      StructField("b.x.fa", StringType, false) ::
+      StructField("b.x.fb", IntegerType, false, metadata) ::
+      StructField("b.y.fa", StringType, false) ::
+      StructField("b.y.fb", IntegerType, false, metadata) ::
+      StructField("c.fa", StringType, false) ::
+      StructField("c.fb", IntegerType, false, metadata) ::
+      StructField("fa", StringType, false) ::
+      StructField("fb", IntegerType, false, metadata) :: Nil
     )
   }
 }
