@@ -22,12 +22,14 @@
 package ste
 
 import org.apache.spark.sql.SparkSession
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
+import org.scalatest.BeforeAndAfterAll
 import ste.StructTypeEncoder._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 case class Foo(a: Int, b: String)
 
-class IntegrationSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
+class IntegrationSpec extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
   val spark = SparkSession.builder()
     .master("local")
