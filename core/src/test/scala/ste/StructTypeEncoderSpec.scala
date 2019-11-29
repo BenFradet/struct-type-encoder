@@ -22,11 +22,12 @@
 package ste
 
 import org.apache.spark.sql.types._
-import org.scalatest.{FlatSpec, Matchers}
 import shapeless.test.illTyped
 import ste.StructTypeEncoder._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class StructTypeEncoderSpec extends FlatSpec with Matchers {
+class StructTypeEncoderSpec extends AnyFlatSpec with Matchers {
 
   "A StructTypeEncoder" should "deal with the supported primitive types" in {
     case class Foo(a: Array[Byte], b: Boolean, c: Byte, d: java.sql.Date, e: BigDecimal, f: Double, 

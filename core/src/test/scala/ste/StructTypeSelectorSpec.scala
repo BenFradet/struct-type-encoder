@@ -23,9 +23,10 @@ package ste
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
-import org.scalatest.{ FlatSpec, Matchers }
 import StructTypeEncoder._
 import StructTypeSelector._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 object StructSelectorSpec {
   case class A(x: Int, y: String)
@@ -39,7 +40,7 @@ object StructSelectorSpec {
   case class I(@Flatten h: H, w: Int)
 }
 
-class StructSelectorSpec extends FlatSpec with Matchers {
+class StructSelectorSpec extends AnyFlatSpec with Matchers {
   import StructSelectorSpec._
   val spark = SparkSession.builder().master("local").getOrCreate()
 
