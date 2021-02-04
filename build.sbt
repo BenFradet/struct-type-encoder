@@ -1,8 +1,7 @@
 lazy val buildSettings = Seq(
   organization := "com.github.benfradet",
   version := "0.6.0-SNAPSHOT",
-  scalaVersion := "2.12.7",
-  crossScalaVersions := Seq("2.11.12", "2.12.7")
+  scalaVersion := "2.12.7"
 )
 
 lazy val compilerOptions = Seq(
@@ -19,7 +18,7 @@ lazy val compilerOptions = Seq(
 )
 
 lazy val shapelessVersion = "2.3.3"
-lazy val sparkVersion = "2.4.7"
+lazy val sparkVersion = "3.0.1"
 lazy val scalatestVersion = "3.2.3"
 
 lazy val baseSettings = Seq(
