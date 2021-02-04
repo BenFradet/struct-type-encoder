@@ -25,11 +25,7 @@ lazy val scalatestVersion = "3.2.3"
 lazy val baseSettings = Seq(
   libraryDependencies ++= Seq(
     "com.chuusai" %% "shapeless" % shapelessVersion,
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) if v <= 11 =>
-        "org.apache.spark" %% "spark-sql" % "2.4.7" % "provided"
-      case _ => "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided"
-    }
+    "org.apache.spark" %% "spark-sql" % sparkVersion % "provided"
   ) ++ Seq(
     "org.scalatest" %% "scalatest" % scalatestVersion
   ).map(_ % "test"),
