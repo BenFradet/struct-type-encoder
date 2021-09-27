@@ -1,7 +1,7 @@
 lazy val buildSettings = Seq(
   organization := "com.github.benfradet",
   version := "0.7.0-SNAPSHOT",
-  scalaVersion := "2.12.15"
+  scalaVersion := "2.13.6"
 )
 
 lazy val compilerOptions = Seq(
